@@ -4,4 +4,4 @@ Code and data used in "Extreme target-site insensitivity in monarch ATPα expand
 
 ## Data Availability
 
-The data used in this analysis are either available in the directory of each Figure.
+The data used in this analysis are available in the directory of each Figure.
