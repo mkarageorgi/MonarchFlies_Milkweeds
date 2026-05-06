@@ -10,7 +10,7 @@ The script generates:
 plant_butterfly_long_all.csv, a curated dataset containing butterfly taxonomy, host-plant taxonomy, host-association records, cardenolide occurrence, and ATPα state information.
 
 ### 2. Danaini phylogeny reconstruction
-2_prepare_danaini_phylogeny.Rmd reconstructs the Danaini phylogeny used in Extended Data Figure 1 & Figure 1. The analysis follows the approach of Chazot et al. (2021) and uses available mitochondrial and nuclear gene sequences for Danaini butterflies and two Danainae outgroups.
+2_prepare_danaini_phylogeny.Rmd generates the Danaini phylogeny used in Extended Data Figure 1 & Figure 1. The analysis follows the approach of Chazot et al. (2021) and uses available mitochondrial and nuclear gene sequences for Danaini butterflies and two Danainae outgroups.
 
 Sequences were aligned, concatenated, and used to infer a maximum-likelihood phylogeny. The resulting tree was pruned to the 55 Danaini species and two outgroups with host-plant data for subsequent analyses.
 
