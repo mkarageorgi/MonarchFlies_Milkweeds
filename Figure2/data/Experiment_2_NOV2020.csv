@@ -1,0 +1,385 @@
+Media,Genotype,Counting Day,Vial,Pupae,Adults ,Verification,Input,Developmental Day
+tuberosa,LSN,11/2,55,0,0,TRUE,55,5
+syriaca,LSN,11/2,56,5,0,TRUE,56,5
+lettuce,LSN,11/2,57,7,0,TRUE,57,5
+curassavica,LSN,11/2,58,0,0,TRUE,58,5
+asperula,LSN,11/2,59,3,0,TRUE,59,5
+viridis,LSN,11/2,60,0,0,TRUE,60,5
+physocarpus,LSN,11/2,61,0,0,TRUE,61,5
+control,LSN,11/2,62,0,0,TRUE,62,5
+perennis ,LSN,11/2,63,0,0,TRUE,63,5
+tuberosa,VSN,11/2,64,N/A,N/A,TRUE,64,5
+syriaca,VSN,11/2,65,N/A,N/A,TRUE,65,5
+lettuce,VSN,11/2,66,N/A,N/A,TRUE,66,5
+curassavica,VSN,11/2,67,N/A,N/A,TRUE,67,5
+asperula,VSN,11/2,68,N/A,N/A,TRUE,68,5
+viridis,VSN,11/2,69,N/A,N/A,TRUE,69,5
+physocarpus,VSN,11/2,70,N/A,N/A,TRUE,70,5
+control,VSN,11/2,71,N/A,N/A,TRUE,71,5
+perennis ,VSN,11/2,72,N/A,N/A,TRUE,72,5
+tuberosa,VSH,11/2,73,0,0,TRUE,73,5
+syriaca,VSH,11/2,74,13,0,TRUE,74,5
+lettuce,VSH,11/2,75,3,0,TRUE,75,5
+curassavica,VSH,11/2,76,0,0,TRUE,76,5
+asperula,VSH,11/2,77,0,0,TRUE,77,5
+viridis,VSH,11/2,78,0,0,TRUE,78,5
+physocarpus,VSH,11/2,79,N/A,N/A,TRUE,79,5
+control,VSH,11/2,80,N/A,N/A,TRUE,80,5
+perennis ,VSH,11/2,81,N/A,N/A,TRUE,81,5
+tuberosa,QSN,11/2,82,0,0,TRUE,82,5
+syriaca,QSN,11/2,83,1,0,TRUE,83,5
+lettuce,QSN,11/2,84,0,0,TRUE,84,5
+curassavica,QSN,11/2,85,0,0,TRUE,85,5
+asperula,QSN,11/2,86,0,0,TRUE,86,5
+viridis,QSN,11/2,87,0,0,TRUE,87,5
+physocarpus,QSN,11/2,88,N/A,N/A,TRUE,88,5
+control,QSN,11/2,89,N/A,N/A,TRUE,89,5
+perennis ,QSN,11/2,90,N/A,N/A,TRUE,90,5
+tuberosa,LAN,11/2,91,0,0,TRUE,91,5
+syriaca,LAN,11/2,92,0,0,TRUE,92,5
+lettuce,LAN,11/2,93,0,0,TRUE,93,5
+curassavica,LAN,11/2,94,0,0,TRUE,94,5
+asperula,LAN,11/2,95,0,0,TRUE,95,5
+viridis,LAN,11/2,96,N/A,N/A,TRUE,96,5
+physocarpus,LAN,11/2,97,N/A,N/A,TRUE,97,5
+control,LAN,11/2,98,N/A,N/A,TRUE,98,5
+perennis ,LAN,11/2,99,N/A,N/A,TRUE,99,5
+tuberosa,QAN,11/2,100,0,0,TRUE,100,5
+syriaca,QAN,11/2,101,0,0,TRUE,101,5
+lettuce,QAN,11/2,102,0,0,TRUE,102,5
+curassavica,QAN,11/2,103,0,0,TRUE,103,5
+asperula,QAN,11/2,104,0,0,TRUE,104,5
+viridis,QAN,11/2,105,0,0,TRUE,105,5
+physocarpus,QAN,11/2,106,0,0,TRUE,106,5
+control,QAN,11/2,107,0,0,TRUE,107,5
+perennis ,QAN,11/2,108,0,0,TRUE,108,5
+,,,,,,,,
+tuberosa,LSN,11/4,55,0,0,TRUE,55,7
+syriaca,LSN,11/4,56,24,0,TRUE,56,7
+lettuce,LSN,11/4,57,20,0,TRUE,57,7
+curassavica,LSN,11/4,58,14,0,TRUE,58,7
+asperula,LSN,11/4,59,11,0,TRUE,59,7
+viridis,LSN,11/4,60,3,0,TRUE,60,7
+physocarpus,LSN,11/4,61,0,0,TRUE,61,7
+control,LSN,11/4,62,26,0,TRUE,62,7
+perennis ,LSN,11/4,63,0,0,TRUE,63,7
+tuberosa,VSN,11/4,64,N/A,N/A,TRUE,64,7
+syriaca,VSN,11/4,65,N/A,N/A,TRUE,65,7
+lettuce,VSN,11/4,66,N/A,N/A,TRUE,66,7
+curassavica,VSN,11/4,67,N/A,N/A,TRUE,67,7
+asperula,VSN,11/4,68,N/A,N/A,TRUE,68,7
+viridis,VSN,11/4,69,N/A,N/A,TRUE,69,7
+physocarpus,VSN,11/4,70,N/A,N/A,TRUE,70,7
+control,VSN,11/4,71,N/A,N/A,TRUE,71,7
+perennis ,VSN,11/4,72,N/A,N/A,TRUE,72,7
+tuberosa,VSH,11/4,73,9,0,TRUE,73,7
+syriaca,VSH,11/4,74,17,0,TRUE,74,7
+lettuce,VSH,11/4,75,20,0,TRUE,75,7
+curassavica,VSH,11/4,76,9,0,TRUE,76,7
+asperula,VSH,11/4,77,5,0,TRUE,77,7
+viridis,VSH,11/4,78,15,0,TRUE,78,7
+physocarpus,VSH,11/4,79,N/A,N/A,TRUE,79,7
+control,VSH,11/4,80,N/A,N/A,TRUE,80,7
+perennis ,VSH,11/4,81,N/A,N/A,TRUE,81,7
+tuberosa,QSN,11/4,82,16,0,TRUE,82,7
+syriaca,QSN,11/4,83,24,0,TRUE,83,7
+lettuce,QSN,11/4,84,18,0,TRUE,84,7
+curassavica,QSN,11/4,85,9,0,TRUE,85,7
+asperula,QSN,11/4,86,4,0,TRUE,86,7
+viridis,QSN,11/4,87,11,0,TRUE,87,7
+physocarpus,QSN,11/4,88,N/A,N/A,TRUE,88,7
+control,QSN,11/4,89,N/A,N/A,TRUE,89,7
+perennis ,QSN,11/4,90,N/A,N/A,TRUE,90,7
+tuberosa,LAN,11/4,91,2,0,TRUE,91,7
+syriaca,LAN,11/4,92,19,0,TRUE,92,7
+lettuce,LAN,11/4,93,21,0,TRUE,93,7
+curassavica,LAN,11/4,94,0,0,TRUE,94,7
+asperula,LAN,11/4,95,0,0,TRUE,95,7
+viridis,LAN,11/4,96,N/A,N/A,TRUE,96,7
+physocarpus,LAN,11/4,97,N/A,N/A,TRUE,97,7
+control,LAN,11/4,98,N/A,N/A,TRUE,98,7
+perennis ,LAN,11/4,99,N/A,N/A,TRUE,99,7
+tuberosa,QAN,11/4,100,3,0,TRUE,100,7
+syriaca,QAN,11/4,101,19,0,TRUE,101,7
+lettuce,QAN,11/4,102,25,0,TRUE,102,7
+curassavica,QAN,11/4,103,0,0,TRUE,103,7
+asperula,QAN,11/4,104,2,0,TRUE,104,7
+viridis,QAN,11/4,105,1,0,TRUE,105,7
+physocarpus,QAN,11/4,106,3,0,TRUE,106,7
+control,QAN,11/4,107,20,0,TRUE,107,7
+perennis ,QAN,11/4,108,0,0,TRUE,108,7
+,,,,,,,,
+tuberosa,LSN,11/6,55,10,0,TRUE,55,9
+syriaca,LSN,11/6,56,2,0,TRUE,56,9
+lettuce,LSN,11/6,57,0,0,TRUE,57,9
+curassavica,LSN,11/6,58,8,0,TRUE,58,9
+asperula,LSN,11/6,59,9,0,TRUE,59,9
+viridis,LSN,11/6,60,17,0,TRUE,60,9
+physocarpus,LSN,11/6,61,19,0,TRUE,61,9
+control,LSN,11/6,62,2,0,TRUE,62,9
+perennis ,LSN,11/6,63,6,0,TRUE,63,9
+tuberosa,VSN,11/6,64,N/A,N/A,TRUE,64,9
+syriaca,VSN,11/6,65,N/A,N/A,TRUE,65,9
+lettuce,VSN,11/6,66,N/A,N/A,TRUE,66,9
+curassavica,VSN,11/6,67,N/A,N/A,TRUE,67,9
+asperula,VSN,11/6,68,N/A,N/A,TRUE,68,9
+viridis,VSN,11/6,69,N/A,N/A,TRUE,69,9
+physocarpus,VSN,11/6,70,N/A,N/A,TRUE,70,9
+control,VSN,11/6,71,N/A,N/A,TRUE,71,9
+perennis ,VSN,11/6,72,N/A,N/A,TRUE,72,9
+tuberosa,VSH,11/6,73,17,0,TRUE,73,9
+syriaca,VSH,11/6,74,0,0,TRUE,74,9
+lettuce,VSH,11/6,75,0,0,TRUE,75,9
+curassavica,VSH,11/6,76,9,0,TRUE,76,9
+asperula,VSH,11/6,77,19,0,TRUE,77,9
+viridis,VSH,11/6,78,6,0,TRUE,78,9
+physocarpus,VSH,11/6,79,N/A,N/A,TRUE,79,9
+control,VSH,11/6,80,N/A,N/A,TRUE,80,9
+perennis ,VSH,11/6,81,N/A,N/A,TRUE,81,9
+tuberosa,QSN,11/6,82,4,0,TRUE,82,9
+syriaca,QSN,11/6,83,1,0,TRUE,83,9
+lettuce,QSN,11/6,84,0,0,TRUE,84,9
+curassavica,QSN,11/6,85,3,0,TRUE,85,9
+asperula,QSN,11/6,86,10,0,TRUE,86,9
+viridis,QSN,11/6,87,1,0,TRUE,87,9
+physocarpus,QSN,11/6,88,N/A,N/A,TRUE,88,9
+control,QSN,11/6,89,N/A,N/A,TRUE,89,9
+perennis ,QSN,11/6,90,N/A,N/A,TRUE,90,9
+tuberosa,LAN,11/6,91,10,0,TRUE,91,9
+syriaca,LAN,11/6,92,2,0,TRUE,92,9
+lettuce,LAN,11/6,93,0,0,TRUE,93,9
+curassavica,LAN,11/6,94,4,0,TRUE,94,9
+asperula,LAN,11/6,95,0,0,TRUE,95,9
+viridis,LAN,11/6,96,N/A,N/A,TRUE,96,9
+physocarpus,LAN,11/6,97,N/A,N/A,TRUE,97,9
+control,LAN,11/6,98,N/A,N/A,TRUE,98,9
+perennis ,LAN,11/6,99,N/A,N/A,TRUE,99,9
+tuberosa,QAN,11/6,100,11,0,TRUE,100,9
+syriaca,QAN,11/6,101,3,0,TRUE,101,9
+lettuce,QAN,11/6,102,0,0,TRUE,102,9
+curassavica,QAN,11/6,103,18,0,TRUE,103,9
+asperula,QAN,11/6,104,12,0,TRUE,104,9
+viridis,QAN,11/6,105,5,0,TRUE,105,9
+physocarpus,QAN,11/6,106,12,0,TRUE,106,9
+control,QAN,11/6,107,3,0,TRUE,107,9
+perennis ,QAN,11/6,108,3,0,TRUE,108,9
+,,,,,,,,
+tuberosa,LSN,11/9,55,7,0,TRUE,55,12
+syriaca,LSN,11/9,56,0,29,TRUE,56,12
+lettuce,LSN,11/9,57,0,26,TRUE,57,12
+curassavica,LSN,11/9,58,0,17,TRUE,58,12
+asperula,LSN,11/9,59,0,6,TRUE,59,12
+viridis,LSN,11/9,60,3,0,TRUE,60,12
+physocarpus,LSN,11/9,61,4,1,TRUE,61,12
+control,LSN,11/9,62,4,15,TRUE,62,12
+perennis ,LSN,11/9,63,10,0,TRUE,63,12
+tuberosa,VSN,11/9,64,N/A,N/A,TRUE,64,12
+syriaca,VSN,11/9,65,N/A,N/A,TRUE,65,12
+lettuce,VSN,11/9,66,N/A,N/A,TRUE,66,12
+curassavica,VSN,11/9,67,N/A,N/A,TRUE,67,12
+asperula,VSN,11/9,68,N/A,N/A,TRUE,68,12
+viridis,VSN,11/9,69,N/A,N/A,TRUE,69,12
+physocarpus,VSN,11/9,70,N/A,N/A,TRUE,70,12
+control,VSN,11/9,71,N/A,N/A,TRUE,71,12
+perennis ,VSN,11/9,72,N/A,N/A,TRUE,72,12
+tuberosa,VSH,11/9,73,0,6,TRUE,73,12
+syriaca,VSH,11/9,74,0,28,TRUE,74,12
+lettuce,VSH,11/9,75,1,21,TRUE,75,12
+curassavica,VSH,11/9,76,0,2,TRUE,76,12
+asperula,VSH,11/9,77,0,3,TRUE,77,12
+viridis,VSH,11/9,78,0,2,TRUE,78,12
+physocarpus,VSH,11/9,79,N/A,N/A,TRUE,79,12
+control,VSH,11/9,80,N/A,N/A,TRUE,80,12
+perennis ,VSH,11/9,81,N/A,N/A,TRUE,81,12
+tuberosa,QSN,11/9,82,0,6,TRUE,82,12
+syriaca,QSN,11/9,83,0,22,TRUE,83,12
+lettuce,QSN,11/9,84,0,19,TRUE,84,12
+curassavica,QSN,11/9,85,0,8,TRUE,85,12
+asperula,QSN,11/9,86,2,1,TRUE,86,12
+viridis,QSN,11/9,87,4,4,TRUE,87,12
+physocarpus,QSN,11/9,88,N/A,N/A,TRUE,88,12
+control,QSN,11/9,89,N/A,N/A,TRUE,89,12
+perennis ,QSN,11/9,90,N/A,N/A,TRUE,90,12
+tuberosa,LAN,11/9,91,0,0,TRUE,91,12
+syriaca,LAN,11/9,92,0,16,TRUE,92,12
+lettuce,LAN,11/9,93,1,22,TRUE,93,12
+curassavica,LAN,11/9,94,9,0,TRUE,94,12
+asperula,LAN,11/9,95,3,0,TRUE,95,12
+viridis,LAN,11/9,96,N/A,N/A,TRUE,96,12
+physocarpus,LAN,11/9,97,N/A,N/A,TRUE,97,12
+control,LAN,11/9,98,N/A,N/A,TRUE,98,12
+perennis ,LAN,11/9,99,N/A,N/A,TRUE,99,12
+tuberosa,QAN,11/9,100,3,0,TRUE,100,12
+syriaca,QAN,11/9,101,0,11,TRUE,101,12
+lettuce,QAN,11/9,102,0,21,TRUE,102,12
+curassavica,QAN,11/9,103,3,0,TRUE,103,12
+asperula,QAN,11/9,104,1,1,TRUE,104,12
+viridis,QAN,11/9,105,8,0,TRUE,105,12
+physocarpus,QAN,11/9,106,7,3,TRUE,106,12
+control,QAN,11/9,107,0,13,TRUE,107,12
+perennis ,QAN,11/9,108,3,0,TRUE,108,12
+,,,,,,,,
+tuberosa,LSN,11/11,55,0,0,TRUE,55,14
+syriaca,LSN,11/11,56,0,0,TRUE,56,14
+lettuce,LSN,11/11,57,0,1,TRUE,57,14
+curassavica,LSN,11/11,58,0,5,TRUE,58,14
+asperula,LSN,11/11,59,0,6,TRUE,59,14
+viridis,LSN,11/11,60,0,12,TRUE,60,14
+physocarpus,LSN,11/11,61,0,13,TRUE,61,14
+control,LSN,11/11,62,0,10,TRUE,62,14
+perennis ,LSN,11/11,63,0,2,TRUE,63,14
+tuberosa,VSN,11/11,64,N/A,N/A,TRUE,64,14
+syriaca,VSN,11/11,65,N/A,N/A,TRUE,65,14
+lettuce,VSN,11/11,66,N/A,N/A,TRUE,66,14
+curassavica,VSN,11/11,67,N/A,N/A,TRUE,67,14
+asperula,VSN,11/11,68,N/A,N/A,TRUE,68,14
+viridis,VSN,11/11,69,N/A,N/A,TRUE,69,14
+physocarpus,VSN,11/11,70,N/A,N/A,TRUE,70,14
+control,VSN,11/11,71,N/A,N/A,TRUE,71,14
+perennis ,VSN,11/11,72,N/A,N/A,TRUE,72,14
+tuberosa,VSH,11/11,73,0,18,TRUE,73,14
+syriaca,VSH,11/11,74,0,0,TRUE,74,14
+lettuce,VSH,11/11,75,0,0,TRUE,75,14
+curassavica,VSH,11/11,76,0,17,TRUE,76,14
+asperula,VSH,11/11,77,0,19,TRUE,77,14
+viridis,VSH,11/11,78,0,21,TRUE,78,14
+physocarpus,VSH,11/11,79,N/A,N/A,TRUE,79,14
+control,VSH,11/11,80,N/A,N/A,TRUE,80,14
+perennis ,VSH,11/11,81,N/A,N/A,TRUE,81,14
+tuberosa,QSN,11/11,82,0,8,TRUE,82,14
+syriaca,QSN,11/11,83,0,3,TRUE,83,14
+lettuce,QSN,11/11,84,0,0,TRUE,84,14
+curassavica,QSN,11/11,85,0,5,TRUE,85,14
+asperula,QSN,11/11,86,0,6,TRUE,86,14
+viridis,QSN,11/11,87,0,3,TRUE,87,14
+physocarpus,QSN,11/11,88,N/A,N/A,TRUE,88,14
+control,QSN,11/11,89,N/A,N/A,TRUE,89,14
+perennis ,QSN,11/11,90,N/A,N/A,TRUE,90,14
+tuberosa,LAN,11/11,91,0,4,TRUE,91,14
+syriaca,LAN,11/11,92,0,2,TRUE,92,14
+lettuce,LAN,11/11,93,0,5,TRUE,93,14
+curassavica,LAN,11/11,94,0,1,TRUE,94,14
+asperula,LAN,11/11,95,0,0,TRUE,95,14
+viridis,LAN,11/11,96,N/A,N/A,TRUE,96,14
+physocarpus,LAN,11/11,97,N/A,N/A,TRUE,97,14
+control,LAN,11/11,98,N/A,N/A,TRUE,98,14
+perennis ,LAN,11/11,99,N/A,N/A,TRUE,99,14
+tuberosa,QAN,11/11,100,0,11,TRUE,100,14
+syriaca,QAN,11/11,101,0,8,TRUE,101,14
+lettuce,QAN,11/11,102,0,4,TRUE,102,14
+curassavica,QAN,11/11,103,0,13,TRUE,103,14
+asperula,QAN,11/11,104,0,8,TRUE,104,14
+viridis,QAN,11/11,105,0,4,TRUE,105,14
+physocarpus,QAN,11/11,106,0,9,TRUE,106,14
+control,QAN,11/11,107,0,14,TRUE,107,14
+perennis ,QAN,11/11,108,0,2,TRUE,108,14
+,,,,,,,,
+tuberosa,LSN,11/14,55,0,0,TRUE,55,17
+syriaca,LSN,11/14,56,0,0,TRUE,56,17
+lettuce,LSN,11/14,57,0,1,TRUE,57,17
+curassavica,LSN,11/14,58,0,0,TRUE,58,17
+asperula,LSN,11/14,59,0,0,TRUE,59,17
+viridis,LSN,11/14,60,0,0,TRUE,60,17
+physocarpus,LSN,11/14,61,0,4,TRUE,61,17
+control,LSN,11/14,62,0,0,TRUE,62,17
+perennis ,LSN,11/14,63,0,1,TRUE,63,17
+tuberosa,VSN,11/14,64,N/A,N/A,TRUE,64,17
+syriaca,VSN,11/14,65,N/A,N/A,TRUE,65,17
+lettuce,VSN,11/14,66,N/A,N/A,TRUE,66,17
+curassavica,VSN,11/14,67,N/A,N/A,TRUE,67,17
+asperula,VSN,11/14,68,N/A,N/A,TRUE,68,17
+viridis,VSN,11/14,69,N/A,N/A,TRUE,69,17
+physocarpus,VSN,11/14,70,N/A,N/A,TRUE,70,17
+control,VSN,11/14,71,N/A,N/A,TRUE,71,17
+perennis ,VSN,11/14,72,N/A,N/A,TRUE,72,17
+tuberosa,VSH,11/14,73,0,1,TRUE,73,17
+syriaca,VSH,11/14,74,0,0,TRUE,74,17
+lettuce,VSH,11/14,75,0,0,TRUE,75,17
+curassavica,VSH,11/14,76,0,0,TRUE,76,17
+asperula,VSH,11/14,77,0,0,TRUE,77,17
+viridis,VSH,11/14,78,0,0,TRUE,78,17
+physocarpus,VSH,11/14,79,N/A,N/A,TRUE,79,17
+control,VSH,11/14,80,N/A,N/A,TRUE,80,17
+perennis ,VSH,11/14,81,N/A,N/A,TRUE,81,17
+tuberosa,QSN,11/14,82,0,0,TRUE,82,17
+syriaca,QSN,11/14,83,0,0,TRUE,83,17
+lettuce,QSN,11/14,84,0,0,TRUE,84,17
+curassavica,QSN,11/14,85,0,0,TRUE,85,17
+asperula,QSN,11/14,86,0,0,TRUE,86,17
+viridis,QSN,11/14,87,0,0,TRUE,87,17
+physocarpus,QSN,11/14,88,N/A,N/A,TRUE,88,17
+control,QSN,11/14,89,N/A,N/A,TRUE,89,17
+perennis ,QSN,11/14,90,N/A,N/A,TRUE,90,17
+tuberosa,LAN,11/14,91,0,0,TRUE,91,17
+syriaca,LAN,11/14,92,0,0,TRUE,92,17
+lettuce,LAN,11/14,93,0,0,TRUE,93,17
+curassavica,LAN,11/14,94,0,2,TRUE,94,17
+asperula,LAN,11/14,95,0,0,TRUE,95,17
+viridis,LAN,11/14,96,N/A,N/A,TRUE,96,17
+physocarpus,LAN,11/14,97,N/A,N/A,TRUE,97,17
+control,LAN,11/14,98,N/A,N/A,TRUE,98,17
+perennis ,LAN,11/14,99,N/A,N/A,TRUE,99,17
+tuberosa,QAN,11/14,100,0,2,TRUE,100,17
+syriaca,QAN,11/14,101,0,0,TRUE,101,17
+lettuce,QAN,11/14,102,0,0,TRUE,102,17
+curassavica,QAN,11/14,103,0,1,TRUE,103,17
+asperula,QAN,11/14,104,0,0,TRUE,104,17
+viridis,QAN,11/14,105,0,1,TRUE,105,17
+physocarpus,QAN,11/14,106,0,2,TRUE,106,17
+control,QAN,11/14,107,0,0,TRUE,107,17
+perennis ,QAN,11/14,108,0,0,TRUE,108,17
+,,,,,,,,
+tuberosa,LSN,11/16,55,0,0,TRUE,55,19
+syriaca,LSN,11/16,56,0,0,TRUE,56,19
+lettuce,LSN,11/16,57,0,0,TRUE,57,19
+curassavica,LSN,11/16,58,0,0,TRUE,58,19
+asperula,LSN,11/16,59,0,0,TRUE,59,19
+viridis,LSN,11/16,60,0,0,TRUE,60,19
+physocarpus,LSN,11/16,61,0,0,TRUE,61,19
+control,LSN,11/16,62,0,0,TRUE,62,19
+perennis ,LSN,11/16,63,0,0,TRUE,63,19
+tuberosa,VSN,11/16,64,N/A,N/A,TRUE,64,19
+syriaca,VSN,11/16,65,N/A,N/A,TRUE,65,19
+lettuce,VSN,11/16,66,N/A,N/A,TRUE,66,19
+curassavica,VSN,11/16,67,N/A,N/A,TRUE,67,19
+asperula,VSN,11/16,68,N/A,N/A,TRUE,68,19
+viridis,VSN,11/16,69,N/A,N/A,TRUE,69,19
+physocarpus,VSN,11/16,70,N/A,N/A,TRUE,70,19
+control,VSN,11/16,71,N/A,N/A,TRUE,71,19
+perennis ,VSN,11/16,72,N/A,N/A,TRUE,72,19
+tuberosa,VSH,11/16,73,0,0,TRUE,73,19
+syriaca,VSH,11/16,74,0,0,TRUE,74,19
+lettuce,VSH,11/16,75,0,0,TRUE,75,19
+curassavica,VSH,11/16,76,0,0,TRUE,76,19
+asperula,VSH,11/16,77,0,0,TRUE,77,19
+viridis,VSH,11/16,78,0,1,TRUE,78,19
+physocarpus,VSH,11/16,79,N/A,N/A,TRUE,79,19
+control,VSH,11/16,80,N/A,N/A,TRUE,80,19
+perennis ,VSH,11/16,81,N/A,N/A,TRUE,81,19
+tuberosa,QSN,11/16,82,0,0,TRUE,82,19
+syriaca,QSN,11/16,83,0,0,TRUE,83,19
+lettuce,QSN,11/16,84,0,0,TRUE,84,19
+curassavica,QSN,11/16,85,0,0,TRUE,85,19
+asperula,QSN,11/16,86,0,0,TRUE,86,19
+viridis,QSN,11/16,87,0,0,TRUE,87,19
+physocarpus,QSN,11/16,88,N/A,N/A,TRUE,88,19
+control,QSN,11/16,89,N/A,N/A,TRUE,89,19
+perennis ,QSN,11/16,90,N/A,N/A,TRUE,90,19
+tuberosa,LAN,11/16,91,0,0,TRUE,91,19
+syriaca,LAN,11/16,92,0,0,TRUE,92,19
+lettuce,LAN,11/16,93,0,0,TRUE,93,19
+curassavica,LAN,11/16,94,0,0,TRUE,94,19
+asperula,LAN,11/16,95,0,0,TRUE,95,19
+viridis,LAN,11/16,96,N/A,N/A,TRUE,96,19
+physocarpus,LAN,11/16,97,N/A,N/A,TRUE,97,19
+control,LAN,11/16,98,N/A,N/A,TRUE,98,19
+perennis ,LAN,11/16,99,N/A,N/A,TRUE,99,19
+tuberosa,QAN,11/16,100,0,0,TRUE,100,19
+syriaca,QAN,11/16,101,0,0,TRUE,101,19
+lettuce,QAN,11/16,102,0,0,TRUE,102,19
+curassavica,QAN,11/16,103,0,0,TRUE,103,19
+asperula,QAN,11/16,104,0,0,TRUE,104,19
+viridis,QAN,11/16,105,0,0,TRUE,105,19
+physocarpus,QAN,11/16,106,0,0,TRUE,106,19
+control,QAN,11/16,107,0,0,TRUE,107,19
+perennis ,QAN,11/16,108,0,0,TRUE,108,19
