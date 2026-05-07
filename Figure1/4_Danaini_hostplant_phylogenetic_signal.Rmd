@@ -1,0 +1,174 @@
+---
+title: "Danaini: Phylogenetic signal in milkweed-clade host use"
+author: "Marianna Karageorgi"
+date: "2026-13-02"
+---
+
+# 1. Pagel's λ for milkweed-clade use
+
+```{r}
+library(tidyverse)
+library(ape)
+library(phytools)
+```
+
+```{r}
+plant_butterfly_long_all = read.csv("./plant_butterfly_long_all.csv")
+```
+
+-   We quantified phylogenetic signal in milkweed-clade association using Pagel’s λ (Pagel 1999).
+
+-   Milkweed use was coded as a binary trait per species:
+
+    -   `1` = recorded host use of the monophyletic milkweed clade (Asclepiadoideae + Secamonoideae)
+
+    -   `0` = no recorded association
+
+-   Pagel’s λ evaluates whether similarity in this trait among species is explained by shared evolutionary history
+
+    -   Diagonal elements represent the total evolutionary variance accumulated along each lineage (root-to-tip branch length)
+
+    -   Off-diagonal elements represent the shared branch length between species (shared ancestry).
+
+-   Pagel’s λ rescales the internal branch lengths of the tree:
+
+    -   λ = 0 → internal branches collapse; species are treated as independent (no phylogenetic signal)
+
+    -   λ = 1 → full phylogenetic covariance retained; trait variation follows Brownian expectations.
+
+    -   0 \< λ \< 1 → partial phylogenetic structuring.
+
+-   The maximum-likelihood estimate of λ was obtained and compared to a model with λ constrained to 0 using a likelihood-ratio test.
+
+-   A significant likelihood-ratio test indicates that milkweed association is phylogenetically conserved rather than randomly distributed across Danaini.
+
+```{r}
+# ============================================================
+# Phylogenetic signal (Pagel’s λ) for milkweed-clade use
+#
+# Goal:
+# Test whether use of the milkweed clade
+# (Asclepiadoideae + Secamonoideae) is phylogenetically conserved
+# across Danaini butterflies.
+#
+# Trait definition:
+# milkweed = 1 → species has ≥1 host record in milkweed clade
+# milkweed = 0 → no recorded association
+# ============================================================
+
+
+# ------------------------------------------------------------
+# Helper function: standardize species names
+# Ensures identical formatting between tree tips and dataset
+# (removes whitespace inconsistencies that break joins)
+# ------------------------------------------------------------
+to_tip = function(x){
+  x %>%
+    as.character() %>%                 # ensure character type
+    stringr::str_trim() %>%            # remove leading/trailing spaces
+    stringr::str_replace_all("\\s+", "_")  # replace spaces with underscores
+}
+
+
+# ------------------------------------------------------------
+# Read Danaini phylogeny
+# ------------------------------------------------------------
+tree0 = ape::read.tree("./danaini_species_final_tree.newick")
+
+# Standardize tree tip labels to match data formatting
+tree0$tip.label = to_tip(tree0$tip.label)
+
+
+# ------------------------------------------------------------
+# Define focal milkweed clade (monophyletic  Apocynaceae lineage)
+# ------------------------------------------------------------
+milkweed_subfams = c("Asclepiadoideae", "Secamonoideae")
+
+
+# ------------------------------------------------------------
+# Build species-level binary trait
+#
+# From long host-record table:
+# collapse multiple plant records per butterfly species
+# into a single presence/absence value
+# ------------------------------------------------------------
+trait_df = plant_butterfly_long_all %>%
+  dplyr::mutate(
+    butterfly_species = to_tip(butterfly_species),   # match tree labels
+    plant_subfamily   = stringr::str_trim(as.character(plant_subfamily)),
+    
+    # ensure presence column behaves numerically
+    # suppress warnings if NAs exist
+    present_i = suppressWarnings(as.integer(present))
+  ) %>%
+  dplyr::group_by(butterfly_species) %>%
+  dplyr::summarise(
+    
+    # milkweed = 1 if ANY host belongs to milkweed clade
+    milkweed = as.integer(
+      any(present_i == 1L &
+          plant_subfamily %in% milkweed_subfams)
+    ),
+    
+    .groups = "drop"
+  )
+
+
+# ------------------------------------------------------------
+# Ensure every tree species has a trait value
+#
+# Species absent from host database are coded as 0
+# (= no recorded milkweed association)
+# ------------------------------------------------------------
+trait_full = tibble::tibble(
+  butterfly_species = tree0$tip.label
+) %>%
+  dplyr::left_join(trait_df, by = "butterfly_species") %>%
+  dplyr::mutate(
+    milkweed = tidyr::replace_na(milkweed, 0L)
+  )
+
+# ------------------------------------------------------------
+# Convert to named vector required by phytools
+# Names MUST equal tree tip labels
+# ------------------------------------------------------------
+milkweed_vec = trait_full$milkweed
+names(milkweed_vec) = trait_full$butterfly_species
+
+# ------------------------------------------------------------
+# Enforce identical ordering between trait vector and tree
+# (critical for comparative methods)
+# ------------------------------------------------------------
+milkweed_vec = milkweed_vec[tree0$tip.label]
+
+# ------------------------------------------------------------
+# Estimate Pagel’s λ
+#
+# λ measures how strongly trait similarity follows
+# phylogenetic relatedness.
+#
+# λ = 0 → no phylogenetic signal
+# λ = 1 → Brownian-motion expectation
+#
+# test = TRUE performs likelihood-ratio test vs λ = 0
+# ------------------------------------------------------------
+fit_lambda = phytools::phylosig(
+  tree   = tree0,
+  x      = milkweed_vec,
+  method = "lambda",
+  test   = TRUE
+)
+
+# Display results
+fit_lambda
+```
+
+# 2. Relevant notes
+
+Pagel's lamda:
+
+<http://phytools.org/mexico2018/>
+
+<https://lukejharmon.github.io/pcm/chapter6_beyondbm/#chapter-6-beyond-brownian-motion> <http://phytools.org/mexico2018/lec/Cont-char-models.pdf>
+
+<https://lukejharmon.github.io/pcm/chapter6_beyondbm/#section-6.2-transforming-the-evolutionary-variance-covariance-matrix>
