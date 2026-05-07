@@ -1,6 +1,6 @@
 # MonarchFlies_Milkweeds
 
-Code and data used in "Extreme target-site insensitivity in monarch ATPα expands dietary resistance across defended milkweeds" by Weksler et al. (unpublished) 
+Code and data used in "Extreme target-site insensitivity in monarch ATPα expands dietary resistance across defended milkweeds" by Weksler et al. (under submission) 
 
 ## Data Availability
 
