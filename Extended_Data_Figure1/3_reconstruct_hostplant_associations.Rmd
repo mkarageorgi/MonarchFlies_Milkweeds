@@ -1,0 +1,739 @@
+---
+title: "Danaini: Reconstruct host plant associations"
+author: "Marianna Karageorgi"
+date: "2026-13-02"
+---
+
+# 1. Data
+
+Curated dataset for host plant associations for Danainae butterflies including information for ATPa resistance form & cardenolide content.
+
+```{r}
+library(tidyverse)
+library(data.table)
+library(patchwork)
+library(ggnewscale)
+library(grid)
+```
+
+```{r}
+plant_butterfly_long_all = read.csv("./plant_butterfly_long_all.csv")
+```
+
+# 2. Phylogenies
+
+```{r}
+library(ape)
+library(phytools)
+library(ggtree)
+library(stringr)
+```
+
+## 2.1 Danaini
+
+Phylogenetic tree for Danaiini butterflies prepared in this study
+
+```{r}
+# Read species-level Danaini tree
+butterfly.tree = read.tree("./2_Danaini_phylo_tree/Danaini_concat.treefile")
+
+# Write a clean copy
+write.tree(butterfly.tree, file = "Danaini_species_tree.newick")
+
+tr_new = read.tree("Danaini_species_tree.newick")
+
+
+# Outgroups (match tip-label formatting)
+outgroups = c("Tellervo zoilus", "Mechanitis polymnia") %>%
+  str_trim() %>%
+  str_replace_all("\\s+", "_") # replaces whitespace with underscores
+
+# 1) Host species (spaces -> underscores)
+host_species_u = plant_butterfly_long_all %>%
+  filter(!is.na(butterfly_species), str_trim(butterfly_species) != "") %>%
+  pull(butterfly_species) %>%
+  as.character() %>%
+  str_trim() %>%
+  unique() %>%
+  str_replace_all("\\s+", "_") # replaces whitespace with underscores
+
+# 2) Tree tips
+tree_tips = str_trim(tr_new$tip.label)
+
+# 3) Prune to (host Danaini + outgroups) 
+tips_keep = unique(c(intersect(tree_tips, host_species_u), outgroups))
+tr_keep = ape::keep.tip(tr_new, tips_keep)
+
+# 4) Root on outgroups (explicit)
+tr_rooted = ape::root(tr_keep, outgroup = outgroups, resolve.root = TRUE)
+
+# Plot
+ggtree(tr_rooted, branch.length = "none", ladderize = FALSE) +
+  geom_tiplab(size = 2) +
+  geom_text2(aes(subset = !isTip, label = node), size = 4, color = "purple")
+```
+
+Check which species are only present in tree or host plant data
+
+```{r}
+# Tips that were in the original tree but NOT kept (i.e., dropped by pruning)
+dropped_from_tree = setdiff(tree_tips, tips_keep)
+
+# Host species that are NOT found in the tree (i.e., records in data with no matching tip)
+hosts_not_in_tree = setdiff(host_species_u, tree_tips)
+```
+
+Rotate internal nodes for visual clarity; topology and branch lengths are unchanged.
+
+```{r}
+tr_rooted
+tr1 = rotateNodes(tr_rooted, nodes = 96)
+tr2 = rotateNodes(tr1, nodes = 88)
+tr3 = rotateNodes(tr2, nodes = 94)
+tr4 = rotateNodes(tr3, nodes = 100)
+tr5 = rotateNodes(tr4, nodes = 67)
+tr6 = rotateNodes(tr5, nodes = 63)
+tr7 = rotateNodes(tr6, nodes = 64)
+tr8 = rotateNodes(tr7, nodes = 57)
+tr9 = rotateNodes(tr8, nodes = 95)
+tr10 = rotateNodes(tr9, nodes = 96)
+
+
+
+ggtree(tr10, ladderize = FALSE) +
+  geom_tiplab(size=2) +
+  geom_text2(aes(subset=!isTip, label=node), size=4, color="purple")
+
+
+#save Danaini tree
+write.tree(tr10,"./danaini_species_final_tree.newick")
+```
+
+## 2.2 Apocynaceae
+
+Use time-calibrated phylogenetic tree of Apocynaceae published in [Fishbein et al. (2018)](https://www.frontiersin.org/journals/ecology-and-evolution/articles/10.3389/fevo.2021.719741/full#B32). The phylogeny covers all major lineages in the family and includes 1,041 species (ca. 20% of species richness) and 50% of the genera (ca. 180 out of 378 currently accepted sensu [Endress et al., 2018-2019](https://www.frontiersin.org/journals/ecology-and-evolution/articles/10.3389/fevo.2021.719741/full#B28)).
+
+Turn species-level phylogeny to genus-level phylogeny:
+
+<https://blog.phytools.org/2014/11/pruning-trees-to-one-member-per-genus.html>.
+
+Extract genus names from tip labels → 2) pick one tip index per genus → 3) `drop.tip()` everything else → 4) rename tips to genus.
+
+```{r}
+
+plant.tree = read.tree("./Apo_Mora_phylo_tree//1041_Fishbein et al. 2018[outgroups_removed].newick")
+
+# extract genus
+genus = sapply(strsplit(plant.tree$tip.label, "_"), `[`, 1)
+
+# find one tip per genus (first occurrence)
+keep = unique(genus)
+
+# indices of tips to keep
+i = sapply(keep, function(x) which(genus == x)[1])
+
+# prune everything else
+plant.tree.genus = drop.tip(plant.tree, plant.tree$tip.label[-i])
+
+# rename tips to genus
+plant.tree.genus$tip.label = keep
+
+plot(plant.tree.genus, cex = 0.6)
+```
+
+Keep in the Apocynaceae phylogeny only genera present in the Danaini-host plant matrix.
+
+Check how many plant genera present in Ackery 1988 butterfly-plant matrix (only Apocynaceae) are also present in the phylogeny. Six genera are missing from the tree.
+
+```{r}
+# 1) genera in plant_butterfly_long_all
+plant.butterfly.mat = plant_butterfly_long_all %>% 
+  filter(plant_family == "Apocynaceae") %>%
+  pull(plant_genus) %>%
+  str_trim() %>%
+  unique() %>%
+  sort()
+
+# 2) genera ingenus-pruned tree
+plant.genera.tree = plant.tree.genus$tip.label %>%
+  str_trim() %>%
+  unique() %>%
+  sort()
+
+# 3) compare
+missing_in_tree = setdiff(plant.butterfly.mat, plant.genera.tree)
+extra_in_tree   = setdiff(plant.genera.tree, plant.butterfly.mat)
+
+
+cat("Missing in tree:", length(missing_in_tree), "\n")
+
+missing_in_tree
+```
+
+Six Apocynaceae genera present in historical host records were not sampled in the Fishbein et al. (2018) phylogeny and were excluded from phylogeny.
+
+```{r}
+# 2) Remove genera that still aren't in the phylogeny
+drop_genera = c("Graphistemma", "Ibatia", "Ischnostemma", "Leichardtia", "Morrenia", "Raphistemma")
+
+plant_butterfly_apoc = plant_butterfly_long_all %>%
+  filter(plant_family == "Apocynaceae") %>%
+  filter(!(plant_genus %in% drop_genera))
+
+intersect(drop_genera, unique(plant_butterfly_apoc$plant_genus))
+```
+
+```{r}
+# 3) Prune the genus tree to match the remaining genera
+genera_keep = sort(unique(plant_butterfly_apoc$plant_genus))
+
+plant.tree.genus.pruned = drop.tip(
+  plant.tree.genus,
+  setdiff(plant.tree.genus$tip.label, genera_keep)
+) %>%
+  ladderize()
+
+# Rotate tree nodes 
+#plant.tree.genus.pruned_rot = rotateNodes(plant.tree.genus.pruned,"all")
+
+tree.plot = ggtree(plant.tree.genus.pruned, branch.length = "none",ladderize = FALSE) +
+  #xlim(0, 90) + 
+  geom_tiplab(size = 1.5, offset=0.2) +
+  geom_label2(aes(subset=!isTip, label=node), size=2, color="darkred", alpha=0.5)
+  
+tree.plot
+
+#ggsave("./apocynaceae_tree.pdf", tree.plot)
+
+write.tree(plant.tree.genus.pruned,"./apocynaceae_genus_final_tree.newick")
+```
+
+## 2.3 Moraceae
+
+-   Recoding plant genera names for Moraceae based on their current synonyms (<https://powo.science.kew.org/>). There are four Moraceae genera in Ackery 1988: Cephalotrophis, Ficus, Malaisia, Streblus, Urostigma.
+
+    (1) Cephalotrophis is a host plant for *Euploea tulliolus*. It's a synonym to *Trophis scandens* (synonym of *Malaisia scandens*). There are reported independent records of *Euploea tulliolus* for *Trophis scandens* <https://era.dpi.qld.gov.au/id/eprint/9230/1/2010Euploea_tulliolus_AE_37_4.pdf>
+
+    (2) Malaisia is a synonym to *Trophis scandens.* <https://era.dpi.qld.gov.au/id/eprint/9230/1/2010Euploea_tulliolus_AE_37_4.pdf>
+
+    (3) Urostigma is a subgenus of Ficus. <https://powo.science.kew.org/results?q=Urostigma>
+
+The moraceae tree should include the genera Trophis, Streblus and Ficus. There are two lineages of Trophis. We take the one of Trophis scandens
+
+Use genus-level moraceae tree from timetree: <https://timetree.org/>. Trophis-1 corresponds to Trophis scandens
+
+```{r}
+
+plant.tree.moraceae = read.tree("./Apo_Mora_phylo_tree/moraceae_genus.nwk")
+
+# 1) Rename Trophis-1 to Trophis
+plant.tree.moraceae$tip.label
+
+plant.tree.moraceae$tip.label[
+  plant.tree.moraceae$tip.label == "Trophis-1"
+] = "Trophis"
+
+plot(plant.tree.moraceae, cex = 0.6)
+```
+
+Keep in the Moraceae phylogeny only genera present in the Danaini-host plant matrix.
+
+Check how many plant genera present in Ackery 1988 butterfly-plant matrix (only Apocynaceae) are also present in the phylogeny. Six genera are missing from the tree.
+
+```{r}
+# 1) genera in plant_butterfly_long_all
+plant.butterfly.mat.mora = plant_butterfly_long_all %>% 
+  filter(plant_family == "Moraceae") %>%
+  pull(plant_genus) %>%
+  str_trim() %>%
+  unique() %>%
+  sort()
+
+# 2) genera ingenus-pruned tree
+plant.genera.tree.mora = plant.tree.moraceae$tip.label %>%
+  str_trim() %>%
+  unique() %>%
+  sort()
+
+# 3) compare
+missing_in_tree.mora = setdiff(plant.butterfly.mat.mora, plant.genera.tree.mora)
+extra_in_tree.mora   = setdiff(plant.genera.tree.mora, plant.butterfly.mat.mora)
+
+
+cat("Missing in tree:", length(missing_in_tree.mora), "\n")
+
+missing_in_tree.mora
+```
+
+```{r}
+# 4) Prune tree
+plant.tree.moraceae.pruned = keep.tip(plant.tree.moraceae, plant.butterfly.mat.mora) %>%
+  ladderize()
+
+tree.plot.mora.pruned = ggtree(plant.tree.moraceae.pruned, branch.length = "none", ladderize = FALSE) +
+  geom_tiplab(size = 3, offset = 0)
+
+tree.plot.mora.pruned
+
+write.tree(plant.tree.moraceae.pruned, "./moraceae_genus_final_tree.newick")
+```
+
+## 2.4 Graft Apocynacae & Moraceae
+
+```{r}
+# read both trees
+apoc = read.tree("./apocynaceae_genus_final_tree.newick")
+mora = read.tree("./moraceae_genus_final_tree.newick")
+
+# backbone with two placeholder tips
+backbone = read.tree(text = "(Apoc_placeholder:1,Mora_placeholder:1);")
+
+# graft Apocynaceae onto Apoc_placeholder
+t1 = bind.tree(backbone, apoc, where = which(backbone$tip.label == "Apoc_placeholder"))
+t1 = drop.tip(t1, "Apoc_placeholder")
+
+# graft Moraceae onto Mora_placeholder (note tip labels changed after first drop)
+t2 = bind.tree(t1, mora, where = which(t1$tip.label == "Mora_placeholder"))
+plant.tree.apoc_mora = drop.tip(t2, "Mora_placeholder")
+
+ggtree(plant.tree.apoc_mora, branch.length = "none",ladderize = FALSE) +
+  #xlim(0, 90) + 
+  geom_tiplab(size = 1.5, offset=0.2)
+
+write.tree(plant.tree.apoc_mora, "./apocynacear_moraceae__genus_final_tree.newick")
+```
+
+# 3. Danaini species x plant genera heatmap
+
+```{r}
+# ============================================================
+# Danaini species × plant genera
+# - Cell value: host use presence (0/1) for each butterfly species × plant genus
+# - Row order: Danaini species phylogeny (danaini_species_final_tree.newick)
+# - Column order: plant phylogeny (Apocynaceae + Moraceae graft)
+# ============================================================
+
+
+# ============================================================
+# 1) Data prep: Apocynaceae & Moraceae, presence/absence
+# ============================================================
+
+# Keep only Apocynaceae & Moraceae
+plant_butterfly_apoc.morac = plant_butterfly_long_all %>%
+  filter(plant_family %in% c("Apocynaceae", "Moraceae"))
+
+# Remove genera that still aren't in the phylogeny
+drop_genera = c("Graphistemma", "Ibatia", "Ischnostemma", "Leichardtia", "Morrenia", "Raphistemma")
+plant_butterfly_apoc.morac = plant_butterfly_apoc.morac %>%
+  filter(!(plant_genus %in% drop_genera))
+
+
+# -----------------------------
+# Function to replace missing/empty taxonomy labels with "unplaced"
+# -----------------------------
+clean_tax <- function(x) {
+  x <- as.character(x)
+  x[is.na(x) | trimws(x) == ""] <- "unplaced"
+  x
+}
+
+
+# Standardize species/genus strings (important for matching tree tips)
+plant_butterfly_apoc.morac2 = plant_butterfly_apoc.morac %>%
+  mutate(
+    butterfly_species = clean_tax(butterfly_species),
+    plant_genus       = clean_tax(plant_genus),
+    # standardize spaces -> underscores to match IQ-TREE style tip labels
+    butterfly_species = stringr::str_replace_all(butterfly_species, "\\s+", "_")
+  )
+
+# ============================================================
+# 2) Species × plant-genus long table (presence 0/1)
+#    - Keep unique butterfly_species × plant_genus pairs
+#    - Fill all missing pairs with present = 0
+# ============================================================
+
+# Unique species present in dataset (optionally restrict later to those in the tree)
+butterfly_species = plant_butterfly_apoc.morac2 %>%
+  distinct(butterfly_species) %>%
+  pull(butterfly_species) %>%
+  sort()
+
+# Unique plant genera indataset (already filtered to those sampled in phylogeny)
+plant_genera = plant_butterfly_apoc.morac2 %>%
+  distinct(plant_genus) %>%
+  pull(plant_genus) %>%
+  sort()
+
+# Observed host-use (present==1) at species level
+species_plant_use = plant_butterfly_apoc.morac2 %>%
+  filter(present == 1) %>%
+  distinct(butterfly_species, plant_genus) %>%
+  mutate(present = 1L)
+
+# Complete all combinations and fill absent with 0
+butterfly_plant_matrix_long = tidyr::crossing(
+  butterfly_species = butterfly_species,
+  plant_genus       = plant_genera
+) %>%
+  left_join(species_plant_use, by = c("butterfly_species", "plant_genus")) %>%
+  mutate(present = replace_na(present, 0L))
+
+
+# ============================================================
+# 3) Plant genus metadata (for tip points / strips)
+# ============================================================
+
+col_tax = plant_butterfly_apoc.morac2 %>%
+  distinct(plant_genus, plant_subfamily, plant_tribe, plant_subtribe, known_cardenolide) %>%
+  mutate(
+    plant_genus       = clean_tax(plant_genus),
+    plant_subfamily   = clean_tax(plant_subfamily),
+    plant_tribe       = clean_tax(plant_tribe),
+    plant_subtribe    = clean_tax(plant_subtribe),
+    known_cardenolide = replace_na(as.integer(known_cardenolide), 0L)
+  ) %>%
+  distinct(plant_genus, .keep_all = TRUE) %>%
+  column_to_rownames("plant_genus")
+```
+
+```{r}
+# ============================================================
+# 4) Build matrix (+ optional column metadata for later top bars)
+# ============================================================
+
+clean_tax <- function(x) {
+  x <- as.character(x)
+  x[is.na(x) | trimws(x) == ""] <- "unplaced"
+  x
+}
+
+# --- species × plant genus (presence/absence) ---
+plant_butterfly_apoc.morac2 = plant_butterfly_apoc.morac %>%
+  mutate(
+    butterfly_species = clean_tax(butterfly_species),
+    plant_genus       = clean_tax(plant_genus),
+    # match tree tip format
+    butterfly_species = stringr::str_replace_all(butterfly_species, "\\s+", "_")
+  )
+
+# keep one unique record per butterfly species – plant genus pair
+# (present should already be 0/1; if any duplicates exist, take max)
+butterfly_plant_matrix_long = plant_butterfly_apoc.morac2 %>%
+  group_by(butterfly_species, plant_genus) %>%
+  summarise(present = max(as.integer(present), na.rm = TRUE), .groups = "drop")
+
+# keep plant genera metadata (unchanged conceptually)
+col_tax = plant_butterfly_apoc.morac2 %>%
+  distinct(plant_genus, plant_subfamily, plant_tribe, plant_subtribe, known_cardenolide) %>%
+  mutate(
+    plant_genus       = clean_tax(plant_genus),
+    plant_subfamily   = clean_tax(plant_subfamily),
+    plant_tribe       = clean_tax(plant_tribe),
+    plant_subtribe    = clean_tax(plant_subtribe),
+    known_cardenolide = replace_na(as.integer(known_cardenolide), 0L)
+  ) %>%
+  distinct(plant_genus, .keep_all = TRUE) %>%
+  column_to_rownames("plant_genus")
+```
+
+```{r}
+# ============================================================
+# 5) Align to phylogenies via factor levels (robust, no NA)
+#    - derive plotting order from the *drawn* ggtree tip order
+#    - then enforce that order by factoring butterfly_species + plant_genus
+# ============================================================
+
+to_tip = function(x){
+  x %>%
+    as.character() %>%
+    stringr::str_trim() %>%
+    stringr::str_replace_all("\\s+", "_")
+}
+
+Danaini.tree = ape::read.tree("./danaini_species_final_tree.newick")
+Apocynaceae.moraceae.tree = ape::read.tree("./apocynacear_moraceae__genus_final_tree.newick")
+
+# make tree tip labels consistent with matrix (underscores)
+Danaini.tree$tip.label = to_tip(Danaini.tree$tip.label)
+Apocynaceae.moraceae.tree$tip.label = to_tip(Apocynaceae.moraceae.tree$tip.label)
+
+# ---- PLANT order: tips as DRAWN in ggtree ----
+col_order = ggtree::ggtree(Apocynaceae.moraceae.tree, ladderize = FALSE)$data %>%
+  dplyr::filter(isTip) %>%
+  dplyr::arrange(y) %>%
+  dplyr::pull(label) %>%
+  to_tip()
+
+
+
+# ---- BUTTERFLY order: tips as DRAWN in ggtree ----
+# make matrix names consistent too (belt + suspenders)
+butterfly_plant_matrix_long = butterfly_plant_matrix_long %>%
+  dplyr::mutate(
+    butterfly_species = to_tip(butterfly_species),
+    plant_genus       = to_tip(plant_genus)
+  )
+
+# plotting order from ggtree "drawn" y positions
+row_order = ggtree::ggtree(Danaini.tree, ladderize = FALSE)$data %>%
+  dplyr::filter(isTip) %>%
+  dplyr::arrange(y) %>%
+  dplyr::pull(label) %>%
+  to_tip()
+
+# ---- identify taxa present in matrix but missing from trees ----
+missing_butterflies = setdiff(unique(butterfly_plant_matrix_long$butterfly_species),
+                              Danaini.tree$tip.label)
+
+missing_plants = setdiff(unique(butterfly_plant_matrix_long$plant_genus),
+                         Apocynaceae.moraceae.tree$tip.label)
+
+# ---- drop unmatched rows BEFORE factoring ----
+butterfly_plant_matrix_long_plot = butterfly_plant_matrix_long %>%
+  dplyr::filter(
+    butterfly_species %in% Danaini.tree$tip.label,
+    plant_genus       %in% Apocynaceae.moraceae.tree$tip.label
+  )
+
+# ---- restrict orders to taxa actually present in plot df ----
+row_order = row_order[row_order %in% butterfly_plant_matrix_long_plot$butterfly_species]
+col_order = col_order[col_order %in% butterfly_plant_matrix_long_plot$plant_genus]
+
+# ---- enforce phylogenetic order by factoring ----
+butterfly_plant_matrix_long2 = butterfly_plant_matrix_long_plot %>%
+  dplyr::mutate(
+    butterfly_species = factor(butterfly_species, levels = row_order),
+    plant_genus       = factor(plant_genus,       levels = col_order)
+  )
+
+# ---- align plant metadata to the same plotting order ----
+col_tax2 = col_tax %>%
+  tibble::rownames_to_column("plant_genus") %>%
+  dplyr::mutate(plant_genus = to_tip(plant_genus)) %>%
+  dplyr::filter(plant_genus %in% col_order) %>%
+  dplyr::mutate(plant_genus = factor(plant_genus, levels = col_order)) %>%
+  dplyr::arrange(plant_genus)
+```
+
+# 4. Danaini, plant trees & heatmap
+
+Use geom_tile for the heatmap: <https://r-graph-gallery.com/79-levelplot-with-ggplot2.html>
+
+## 4.1 Heatmap (species × plant genera; present 0/1; Asclepias purple)
+
+```{r}
+# ============================================================
+# 1) Butterfly × plant genera heatmap (presence/absence)
+# ============================================================
+
+df_tile = butterfly_plant_matrix_long2 %>%
+  mutate(
+    present = as.integer(present),
+    tile_state = dplyr::case_when(
+      plant_genus == "Asclepias" & present == 1L ~ "Asclepias",
+      present == 1L                               ~ "Present",
+      TRUE                                       ~ "Absent"
+    ),
+    tile_state = factor(tile_state, levels = c("Absent", "Present", "Asclepias"))
+  )
+
+p_tile = ggplot(df_tile, aes(x = plant_genus, y = butterfly_species, fill = tile_state)) +
+  geom_tile(color = "white", linewidth = 0.1) +
+  scale_fill_manual(
+  values = c(
+    "Absent" = "white",
+    "Present" = "black",
+    "Asclepias" = "#885ca6"
+  ),
+  breaks = c("Absent", "Present", "Asclepias"),
+  labels = c(
+    "Absent",
+    "Present",
+    expression(italic(Asclepias))
+  ),
+  drop = FALSE
+) +
+  scale_x_discrete(drop = FALSE, limits = col_order, expand = c(0, 0)) +
+  scale_y_discrete(drop = FALSE, limits = row_order, expand = c(0, 0)) +
+  labs(x = NULL, y = NULL, fill = "Host use") +
+  theme_minimal(base_size = 10) +
+  theme(
+    panel.grid = element_blank(),
+#    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.3),
+    axis.text.x  = element_blank(),
+    axis.text.y  = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    plot.margin = margin(5.5, 5.5, 5.5, 5.5)
+  )
+
+p_tile
+```
+
+## 4.2 Danaini tree
+
+```{r}
+# ============================================================
+# 2) Danaini tree + ATPα state STRIP (clean, publication-style)
+#   - ATPα shown as a thin strip between tree and tip labels
+#   - no tile borders
+#   - robust tip-name matching
+# ============================================================
+
+# ---- helpers ----
+to_tip = function(x){
+  x %>% as.character() %>% str_trim() %>% str_replace_all("\\s+", "_")
+}
+
+abbr_tip = function(x){
+  x = to_tip(x) %>% str_replace_all("_", " ")
+  vapply(x, function(z){
+    parts = strsplit(z, " ")[[1]]
+    paste0(substr(parts[1], 1, 1), ". ", parts[2])
+  }, character(1))
+}
+
+# ============================================================
+# Standardize plotted tree labels ONCE
+# ============================================================
+Danaini.tree_plot = Danaini.tree
+Danaini.tree_plot$tip.label = abbr_tip(Danaini.tree_plot$tip.label)
+tips = Danaini.tree_plot$tip.label
+
+# ============================================================
+# Build 1-col "matrix" for gheatmap in tree-tip order
+#   - one ATPα state per species
+#   - missing tips -> "unknown"
+# ============================================================
+atpa_map = plant_butterfly_long_all %>%
+  transmute(
+    tip = abbr_tip(butterfly_species),
+    atpa_state = replace_na(atpa_state, "unknown")
+  ) %>%
+  distinct(tip, .keep_all = TRUE)  # keep first state per tip (assumes unique)
+
+atpa_mat = tibble(
+  tip = tips,
+  atpa_state = atpa_map$atpa_state[match(tips, atpa_map$tip)] %>% replace_na("unknown")
+) %>%
+  column_to_rownames("tip")
+
+# keep fill levels stable for legend ordering
+atpa_mat$atpa_state = factor(
+  atpa_mat$atpa_state,
+  levels = c("LAN", "LSN", "VSN", "VSH", "unknown"),
+  ordered = TRUE
+)
+
+# ============================================================
+# Plot: tree + strip + labels (same as your logic)
+# ============================================================
+p = ggtree(Danaini.tree_plot, branch.length = "none", ladderize = FALSE, size = 0.3) +
+  xlim(0, max(ggtree(Danaini.tree_plot, branch.length="none")$data$x) * 1.45) # this part here also controls distance of phylogenony from heatmap
+
+p_dan_tree = gheatmap(
+  p, atpa_mat,
+  offset = 0.05, 
+  width  = 0.025,
+  colnames = FALSE,
+  color = NA
+) +
+  geom_tiplab(size = 3, offset = 0.75, fontface = "italic") +
+  scale_fill_manual(
+    name = expression("ATP"*alpha*" state"),
+    values = c(
+      "VSH" = "#ed1c2c",
+      "VSN" = "#f36f21",
+      "LSN" = "#fec12b",
+      "LAN" = "#3a6a9e",
+      "unknown" = "grey80"
+    ),
+    breaks = c("VSH", "VSN", "LSN", "LAN", "unknown"),
+    drop = FALSE
+  )
+
+p_dan_tree
+```
+
+## 4.3 Apocynaceae/Moraceae plant tree
+
+```{r}
+# ============================================================
+# 4) Add Apocynaceae/Moraceae plant tree on top of the geom_tile heatmap
+# ============================================================
+
+anno_carden = col_tax2 %>%
+  mutate(
+    label = as.character(plant_genus),
+    cardenolide_state = if_else(known_cardenolide == 1L, "Present", "Absent")
+  ) %>%
+  select(label, cardenolide_state)
+
+p_apoc_tree = ggtree(Apocynaceae.moraceae.tree, branch.length = "none", ladderize = FALSE, size = 0.3) %<+% anno_carden +
+  geom_tippoint(aes(color = cardenolide_state), size = 1.5) +
+  geom_tiplab(size = 3, angle = 90, hjust = 1, offset = -3, fontface = "italic") +
+  scale_color_manual(
+    name   = "Cardenolides",
+    values = c("Absent" = "grey80", "Present" = "black")
+  ) +
+  xlim_tree(1) +
+  coord_flip(clip = "off") +
+  geom_strip('Pachycarpus', 'Melodinus', fontsize=3, barsize=0.3, color='black', label="Apocynaceae", offset= 23, offset.text =3, hjust = 0.5) + 
+  geom_strip('Trophis', 'Streblus', fontsize=3, barsize=0.3, color='black', label="Moraceae", offset= 23, offset.text =3, hjust = 0.5) + 
+  geom_strip('Pachycarpus', 'Toxocarpus', fontsize=3, barsize=0.3, color='black', label="Asclepiadoideae & Secamonoideae (milkweed lineages)", offset= 30, offset.text =3, hjust = 0.5) + 
+  geom_strip('Gymnanthera', 'Hemidesmus', fontsize=3, barsize=0.3, color='black', label="Periplocoideae", offset= 30, offset.text =3, hjust = 0.5) +
+  geom_strip('Aganosma', 'Strophanthus', fontsize=3, barsize=0.3, color='black', label="Apocynoideae", offset= 30, offset.text =3, hjust = 0.5) +
+  geom_strip('Carissa', 'Cerbera', fontsize=3, barsize=0.3, color='black', label="Rauvolfioideae", offset= 30, offset.text =3, hjust = 0.5) +
+ 
+  scale_x_reverse() +
+  theme(
+    axis.text  = element_blank(),
+    axis.ticks = element_blank(),
+    plot.margin = margin(5.5, 5, 5, 5.5)
+  )
+
+p_apoc_tree
+```
+
+## 4.4 Combine plots
+
+```{r}
+# ============================================================
+# 5) Combine plots
+# ============================================================
+
+fig_final = plot_spacer() + p_apoc_tree + p_dan_tree + p_tile +
+  plot_layout(
+    ncol    = 2,
+    widths  = c(1, 2),
+    heights = c(1, 2.2),
+    guides  = "collect" # this is to keep all the legends together
+  ) &
+  
+ theme(
+  legend.position = "right",
+  legend.title = element_text(size = 9),
+  legend.text  = element_text(size = 8),
+  legend.key.height = unit(0.4, "cm"),
+  legend.key.width  = unit(0.4, "cm")
+)
+
+fig_final
+
+ggsave("./Ext_Fig1_butterfly_x_plant.pdf", fig_final, width = 12, height = 10)
+```
+
+The derived VSH genotype originated within the subgenus *Danaus (Danaus)* and is associated with consistent specialization on highly toxic milkweeds (Fig. 2), suggesting an adaptive role in overcoming elevated cardenolide concentrations.
+
+# 6. Relevant notes
+
+1.  Phylogeny annotation with ggtree:
+
+    <https://guangchuangyu.github.io/ggtree-book/chapter-ggtree.html>
+
+    <https://www.randigriffin.com/2017/05/11/primate-phylogeny-ggtree.html>
+
+2.  Patchwork:
+
+    <https://patchwork.data-imaginist.com/articles/guides/layout.html>
