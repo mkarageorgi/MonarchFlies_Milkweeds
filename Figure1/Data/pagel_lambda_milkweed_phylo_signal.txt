@@ -1,0 +1,6 @@
+
+Phylogenetic signal lambda : 0.577707 
+logL(lambda) : -29.7133 
+LR(lambda=0) : 22.3167 
+P-value (based on LR test) : 2.31185e-06 
+
