@@ -1,0 +1,693 @@
+---
+title: "Danaini: Reconstruct host plant associations"
+author: "Marianna Karageorgi & Naama Weksler"
+date: "2026-04-09"
+---
+
+# 1. Host plant data
+
+Curated dataset for host plant associations for Danainae butterflies including information for ATPa resistance form & cardenolide content.
+
+```{r}
+library(tidyverse)
+library(data.table)
+library(ape)
+library(phytools)
+library(ggtree)
+library(stringr)
+library(ggtree)
+library(treeio)
+library(ggimage)
+library(stringr)
+library(ggnewscale)
+```
+
+```{r}
+plant_butterfly_long_all = read.csv("./plant_butterfly_long_all.csv")
+```
+
+# 2. Danaini phylogeny
+
+Phylogenetic tree for Danaiini butterflies prepared in this study
+
+```{r}
+# Read tree
+tr_new = ape::read.tree("./Danaini_phylo_tree//Danaini_concat.treefile")
+
+# Canonical name cleaner: underscores -> spaces, trim, collapse multiple spaces
+clean_name = function(x){
+  stringr::str_squish(stringr::str_replace_all(as.character(x), "_", " "))
+}
+
+# Clean tree tips ONCE
+tr_new$tip.label = clean_name(tr_new$tip.label)
+
+# Outgroups (same cleaning)
+outgroups = clean_name(c("Tellervo zoilus", "Mechanitis polymnia"))
+
+# Host species (same cleaning)
+host_species = plant_butterfly_long_all %>%
+  dplyr::filter(!is.na(butterfly_species),
+                clean_name(butterfly_species) != "") %>%
+  dplyr::pull(butterfly_species) %>%
+  clean_name() %>%
+  unique()
+
+# Diagnostics (so you see problems immediately)
+missing_outgroups = setdiff(outgroups, tr_new$tip.label)
+
+# Prune and root
+tips_keep = unique(c(intersect(tr_new$tip.label, host_species), outgroups))
+tr_keep   = ape::keep.tip(tr_new, tips_keep)
+tr_rooted = ape::root(tr_keep, outgroup = outgroups, resolve.root = TRUE)
+
+# Plot
+ggtree(tr_rooted, branch.length = "none", ladderize = FALSE) +
+  geom_tiplab(size = 2)
+```
+
+Check which species are only present in tree or host plant data
+
+```{r}
+clean_name = function(x)
+  stringr::str_squish(stringr::str_replace_all(as.character(x), "_", " "))
+
+# clean tree tips
+tr_new$tip.label = clean_name(tr_new$tip.label)
+tree_tips = tr_new$tip.label
+
+# clean host species
+host_species_u = plant_butterfly_long_all$butterfly_species |>
+  clean_name() |>
+  unique()
+
+# outgroups
+outgroups = clean_name(c("Tellervo zoilus", "Mechanitis polymnia"))
+
+# kept tips
+tips_keep = unique(c(intersect(tree_tips, host_species_u), outgroups))
+
+# diagnostics
+dropped_from_tree = setdiff(tree_tips, tips_keep)
+hosts_not_in_tree = setdiff(host_species_u, tree_tips)
+```
+
+Rotate internal nodes for visual clarity
+
+```{r}
+tr1 = rotateNodes(tr_rooted, nodes = 96)
+tr2 = rotateNodes(tr1, nodes = 88)
+tr3 = rotateNodes(tr2, nodes = 94)
+tr4 = rotateNodes(tr3, nodes = 100)
+tr5 = rotateNodes(tr4, nodes = 67)
+tr6 = rotateNodes(tr5, nodes = 63)
+tr7 = rotateNodes(tr6, nodes = 64)
+tr8 = rotateNodes(tr7, nodes = 57)
+tr9 = rotateNodes(tr8, nodes = 95)
+tr10 = rotateNodes(tr9, nodes = 96)
+
+ggtree(tr10, ladderize = FALSE) +
+  geom_tiplab(size=2) +
+  geom_text2(aes(subset=!isTip, label=node), size=4, color="purple")
+
+#save Danaini tree
+write.tree(tr10,"./danaini_species_final_tree.newick")
+```
+
+# 3. Broad Danaini phylogeny (55 species)
+
+## 3.1 Ancestral milkweed clade & Ascl use reconstruction
+
+Using the plant_butterfly_long_all dataset, we generate host use data for the Asclepias genus and the milkweed clade (Asclepiadoideae and Secamonoideae subfamilies) using an "at least one" approach. The butterfly species is coded as using that plant if it has at least one plant genera from that plant group in its host list.
+
+```{r}
+#host plant use based on "at least one", with three options (nested states): none, milkweed clade, or asclepias
+
+host_data_permissive_three <- plant_butterfly_long_all %>%
+  group_by(butterfly_species) %>%
+  summarize(
+    # Check for AT LEAST ONE 'present' in each category
+    has_asclepias      = any(plant_genus == "Asclepias" & present == 1),
+    has_milkweed = any((plant_subfamily == "Asclepiadoideae" | plant_subfamily == "Secamonoideae") & present == 1)
+  ) %>%
+  mutate(host_use = case_when(
+    # Priority 1: Any use of Asclepias
+    has_asclepias ~ "asclepias",
+    
+    # Priority 2: Any use of Asclepiadoideae (excluding species already classified as Asclepias)
+    has_milkweed ~ "milkweed",
+    
+    # Fallback
+    TRUE ~ "none"
+  )) 
+
+# Check the counts for your new discrete states
+table(host_data_permissive_three$host_use)
+```
+
+```{r}
+clean_tip = function(x) str_squish(str_replace_all(as.character(x), "_", " "))
+
+# import the tree we saved earlier
+tree0 = read.tree("./danaini_species_final_tree.newick")
+tree0$tip.label = clean_tip(tree0$tip.label)
+
+# clean butterfly species names
+host_data_permissive_three$butterfly_species <- trimws(host_data_permissive_three$butterfly_species)
+
+# filter the dataframe to match the tree
+final_host_data_cleaned <- host_data_permissive_three %>%
+  filter(butterfly_species %in% tree0$tip.label)
+
+# explicitly set the levels in order
+final_host_data_cleaned$host_use <- factor(
+  final_host_data_cleaned$host_use, 
+  levels = c("none", "milkweed", "asclepias")
+)
+
+# create the names vector 
+host_states <- setNames(final_host_data_cleaned$host_use, 
+                        final_host_data_cleaned$butterfly_species)
+
+# verify that they're the same
+length(setdiff(names(host_states), tree0$tip.label))
+```
+
+Next, we model the evolution of host-plant association as a discrete multi-state character trait with three levels: none (no milkweed association), milkweed (association with at least one genera in the Asclepiadoideae and Secamonoideae subfamilies), and Asclepias (association with the Asclepias genus). We perform ancestral state reconstruciton using a maximum likelihood Mk model, with transition states estimated under a symmetric model (assuming equal rates for gain and loss of specific host associations).
+
+```{r}
+# fit ASR
+fit_plot <- fitMk(tree0, host_states, model = "ER")
+anc_states_plot <- ancr(fit_plot)
+
+# organize for plotting, take the Likelihoods (ace) and add the node numbers
+asr_df <- as.data.frame(anc_states_plot$ace)
+asr_df$node <- (length(tree0$tip.label) + 1):(length(tree0$tip.label) + tree0$Nnode)
+
+# add combined probabilities for the milkweed clade and asclepias
+asr_df= asr_df %>%
+  mutate(
+    milkweed_combined = milkweed + asclepias
+  )
+```
+
+## 3.2 Plotting
+
+We visualized the phylogenetic tree and associated data using the R package ggtree, employing a cladogram transformation to emphasize evolutionary transitions independently of absolute branch lengths. Host-plant associations were plotted as a multi-column heatmap using the gheatmap function, with distinct color scales for the milkweed clade and the genus Asclepias managed via the ggnewscale package. Finally, marginal ancestral state probabilities were overlaid onto internal nodes as pie charts using the nodepie and inset functions, providing a spatially integrated representation of host-use evolution and model uncertainty.
+
+```{r}
+full_palette <- c(
+  "none"            = "grey90",       # Neutral grey for non-host plants
+  "milkweed"        = "#d7c0dd",    # Light purple (Milkweed clade)
+  "asclepias"       = "#65338f"    # Dark purple (Asclepias genus)
+)
+```
+
+```{r}
+# ============================================================
+# Fig 1: Danaini tree + ASR pies + host-use strip + ATPα strip
+#   - Host strip: milkweed clade / Asclepias (0/1)
+#   - ATPα strip: LAN/LSN/VSN/VSH/unknown
+# ============================================================
+
+abbr_tip = function(x){
+  x = clean_tip(x)
+  vapply(x, function(z){
+    parts = strsplit(z, " ")[[1]]
+    if (length(parts) >= 2 && nchar(parts[1]) > 0) paste0(substr(parts[1], 1, 1), ". ", parts[2]) else z
+  }, character(1))
+}
+
+p = ggtree(tree0, branch.length = "none", ladderize = FALSE, size = 0.3, color = "grey40") 
+
+tree_xmax = max(p$data$x, na.rm = TRUE)
+
+p = p +
+  geom_tiplab(aes(label = abbr_tip(label)),
+              offset = 1, size = 3, fontface = "italic",
+              align = TRUE, linetype = 0) +
+  # show node numbers
+  # geom_text2(aes(subset=!isTip, label=node), size=4, color="purple") +
+xlim_tree(tree_xmax + 4)
+
+# ============================================================
+# ---- tribe and subtribe annotation ----
+# ============================================================
+tree0$node.label = NULL  # remove bootstrap labels
+
+df_node_labels = tibble::tibble(
+  node = c(
+    # subtribes
+    100, 85, 63, 60,
+
+    # genera
+    104, 101, 94, 91, 86, 68, 64,
+
+    # Danaus subgenera
+    109, 107, 106
+  ),
+  clade = c(
+    # subtribes
+    "Danaina", "Amaurina", "Euploeina", "Itunina",
+
+    # genera
+    "Danaus", "Tirumala", "Parantica", "Ideopsis", "Amauris", "Euploea", "Idea",
+
+    # Danaus subgenera
+    "Danaus", "Salatura", "Anosia"
+  ),
+  label_type = c(
+    rep("subtribe", 4),
+    rep("genus", 7),
+    rep("subgenus", 3)
+  )
+)
+
+p = p %<+% df_node_labels +
+  coord_cartesian(clip = "off") +
+
+  # subtribes: strongest emphasis
+  geom_label2(
+    aes(subset = !isTip & !is.na(clade) & label_type == "subtribe", label = clade),
+    size = 3.1,
+    label.size = 0.22,
+    label.padding = grid::unit(0.16, "lines"),
+    fill = "white",
+    fontface = "bold",
+    nudge_x = -0.85
+  ) +
+
+  # genera: medium emphasis
+  geom_label2(
+    aes(subset = !isTip & !is.na(clade) & label_type == "genus", label = clade),
+    size = 3.1,
+    label.size = 0.22,
+    label.padding = grid::unit(0.16, "lines"),
+    fill = "grey98",
+    fontface = "plain",
+    nudge_x = -0.85
+  ) +
+
+  # subgenera: lightest emphasis
+  geom_label2(
+    aes(subset = !isTip & !is.na(clade) & label_type == "subgenus", label = clade),
+    size = 2.8,
+    label.size = 0.20,
+    label.padding = grid::unit(0.16, "lines"),
+    fill = "grey98",
+    fontface = "italic",
+    nudge_x = -0.65
+  )
+
+p
+```
+
+```{r}
+# ---- ATPα strip ----
+atpa_mat = plant_butterfly_long_all %>%
+  distinct(butterfly_species, atpa_state) %>%
+  mutate(tip = clean_tip(butterfly_species),
+         atpa_state = replace_na(atpa_state, "unknown")) %>%
+  distinct(tip, .keep_all = TRUE) %>%
+  select(tip, atpa_state) %>%
+  tibble::column_to_rownames("tip") %>%
+  as.data.frame()
+
+atpa_mat = atpa_mat[tree0$tip.label, , drop = FALSE]
+atpa_mat$atpa_state[is.na(atpa_mat$atpa_state)] = "unknown"
+
+p = gheatmap(p, atpa_mat, offset = 0.01, width = 0.02, colnames = FALSE, color = NA) +
+  scale_fill_manual(
+    name = expression("ATP"*alpha*" state"),
+    values = c("VSH"="#ed1c2c","VSN"="#f36f21","LSN"="#fec12b","LAN"="#3a6a9e","unknown"="grey85"),
+    breaks = c("VSH","VSN","LSN","LAN","unknown"),
+    drop = FALSE
+  ) +
+  ggnewscale::new_scale_fill()
+
+p
+```
+
+```{r}
+# prepare the 3-column binary dataframe
+host_strip <- final_host_data_cleaned %>%
+  # select species of interest
+  select(butterfly_species, has_asclepias, has_milkweed) %>%
+  mutate(
+    asclepias     = factor(ifelse(has_asclepias, "asclepias_1", "asclepias_0"), 
+                           levels = c("asclepias_0", "asclepias_1")),
+    milkweed      = factor(ifelse(!is.na(has_milkweed) & has_milkweed, "milkweed_1", "milkweed_0"), 
+                    levels = c("milkweed_0", "milkweed_1"))
+  ) %>%
+  # gheatmap REQUIRES species names as rownames
+  column_to_rownames("butterfly_species") %>%
+  # select only the two columns for the strip
+  select(milkweed, asclepias)
+
+# ensure the order matches the tree tips exactly
+host_strip <- host_strip[tree0$tip.label, , drop = FALSE]
+```
+
+```{r}
+# host use binary visualization
+col_milkweed     = "#d7c0dd" 
+col_asclepias    = "#65338f"
+
+p <- gheatmap(p, host_strip, 
+              offset = 0.3, 
+              width = 0.04, 
+              colnames = FALSE, 
+              color = NA) +
+  scale_fill_manual(
+    name = "Host use",
+    values = c(
+      "milkweed_0" = "grey95", "milkweed_1" = col_milkweed,
+      "asclepias_0" = "grey95", "asclepias_1" = col_asclepias
+    ),
+    breaks = c("milkweed_1", "asclepias_1"),
+    labels = c("Milkweed clade", "Asclepias"),
+    drop = FALSE
+  ) +
+  new_scale_fill()
+
+print(p)
+```
+
+```{r, include = FALSE}
+# # make pies to add to the visualization
+# pies <- nodepie(asr_df, cols = 1:3, alpha = 1)
+# 
+# # apply specific colors
+# pies <- lapply(pies, function(g) {
+#   g + scale_fill_manual(values = full_palette)
+# })
+# 
+# # add to existing plot! 
+# p_final <- inset(p, pies, width = 0.03, height = 0.03)
+```
+
+```{r}
+# keep nodes with strong support for either milkweed-clade or Asclepias association
+asr_df_plot = asr_df %>%
+  filter(milkweed_combined > 0.75 | asclepias > 0.75)
+
+# make pies only for those nodes
+suppressWarnings({
+  pies = nodepie(asr_df_plot, cols = c("none", "milkweed", "asclepias"), alpha = 1)
+})
+
+# apply colors
+pies = lapply(pies, function(g) {
+  g +
+    scale_fill_manual(values = full_palette) +
+    theme(legend.position = "none")
+})
+
+# add to existing plot
+p_final = inset(p, pies, width = 0.03, height = 0.03) +
+  theme(
+    legend.position = c(0.04, 1),
+    legend.justification = c(0, 1),
+    legend.box = "vertical",
+    legend.background = element_blank(),
+    legend.key.size = unit(0.35, "cm")
+  )
+
+p_final 
+```
+
+```{r}
+ggsave("./Fig1_asr.png", p_final, width = 10, height = 10)
+```
+
+```{r}
+# add node labels for reference in reading supplemental data 
+
+p_nodes <- p_final + 
+  geom_text2(aes(subset = !isTip, label = node), 
+             size = 4, 
+             color = "black", 
+             hjust = 1.5, 
+             vjust = -0.5)
+
+p_nodes
+ggsave("./Fig1_asr_nodelabels.pdf", p_nodes, width = 10, height = 10)
+```
+
+# 4. Focused subset (18 species)
+
+## 4.1 Ancestral Ascl use reconstruction
+
+Prepare focused subset with species that have ATPa sequence
+
+```{r}
+# species with known ATPα state
+atpa_known_species = plant_butterfly_long_all %>%
+  mutate(
+    tip = clean_tip(butterfly_species),
+    atpa_state = replace_na(atpa_state, "unknown")
+  ) %>%
+  filter(
+    !is.na(tip),
+    tip != "",
+    !is.na(atpa_state),
+    atpa_state != "",
+    atpa_state != "unknown"
+  ) %>%
+  distinct(tip, atpa_state)
+
+# host-use data with clean names
+host_focused = host_data_permissive_three %>%
+  mutate(tip = clean_tip(butterfly_species)) %>%
+  filter(tip %in% tree0$tip.label) %>%
+  mutate(
+    asclepias_use = ifelse(has_asclepias, "asclepias", "no_asclepias")
+  ) %>%
+  select(tip, asclepias_use)
+
+# keep only species with BOTH ATPα state and host-use data
+focused_species = intersect(atpa_known_species$tip, host_focused$tip)
+
+length(focused_species)
+focused_species
+```
+
+Prune tree and prepare Asclepias-use state vector
+
+```{r}
+# prune tree to focused species
+tree_focused = keep.tip(tree0, focused_species)
+
+# prepare Asclepias-use states for focused tree
+asclepias_states_focused = host_focused %>%
+  filter(tip %in% tree_focused$tip.label) %>%
+  distinct(tip, .keep_all = TRUE) %>%
+  select(tip, asclepias_use) %>%
+  deframe()
+
+# ensure order matches tree tips
+asclepias_states_focused = asclepias_states_focused[tree_focused$tip.label]
+
+asclepias_states_focused = factor(
+  asclepias_states_focused,
+  levels = c("no_asclepias", "asclepias")
+)
+
+# checks
+table(asclepias_states_focused)
+setdiff(tree_focused$tip.label, names(asclepias_states_focused))
+any(is.na(asclepias_states_focused))
+```
+
+Save tree for hyphy
+
+```{r}
+write.tree(
+  tree_focused,
+  file = "./Hyphy_H1H2/danaini_focused_atpa_host_species.newick"
+)
+```
+
+Ancestral Asclepias-use reconstruction
+
+```{r}
+# Fit binary ASR model for Asclepias use
+fit_ascl_focused = fitMk(
+  tree_focused,
+  asclepias_states_focused,
+  model = "ER"
+)
+
+# Estimate ancestral states
+anc_ascl_focused = ancr(fit_ascl_focused)
+
+# Extract node probabilities
+ascl_asr_df = as.data.frame(anc_ascl_focused$ace)
+
+# Add internal node numbers
+ascl_asr_df$node = (length(tree_focused$tip.label) + 1):
+  (length(tree_focused$tip.label) + tree_focused$Nnode)
+
+# View ASR results
+ascl_asr_df
+```
+
+## 4.2 Plotting
+
+```{r}
+# palettes
+ascl_palette = c("no_asclepias" = "grey90", "asclepias" = "#65338f")
+atpa_palette = c("VSH" = "#ed1c2c", "VSN" = "#f36f21", "LSN" = "#fec12b", "LAN" = "#3a6a9e")
+
+# observed tip strips
+atpa_strip_focused = atpa_known_species %>%
+  filter(tip %in% tree_focused$tip.label) %>%
+  distinct(tip, atpa_state) %>%
+  mutate(atpa_state = factor(atpa_state, levels = c("VSH", "VSN", "LSN", "LAN"))) %>%
+  select(tip, atpa_state) %>%
+  column_to_rownames("tip") %>%
+  as.data.frame() %>%
+  .[tree_focused$tip.label, , drop = FALSE]
+
+host_strip_focused = host_focused_tree %>%
+  mutate(asclepias_use = factor(asclepias_use, levels = c("no_asclepias", "asclepias"))) %>%
+  select(tip, asclepias_use) %>%
+  column_to_rownames("tip") %>%
+  as.data.frame() %>%
+  .[tree_focused$tip.label, , drop = FALSE]
+
+# keep only strongly supported nodes
+ascl_asr_df_plot = ascl_asr_df %>%
+  filter(no_asclepias > 0.75 | asclepias > 0.75)
+
+# base tree
+p_focused = ggtree(
+  tree_focused,
+  branch.length = "none",
+  ladderize = FALSE,
+  size = 0.3,
+  color = "grey40"
+)
+
+tree_focused_xmax = max(p_focused$data$x, na.rm = TRUE)
+
+p_focused = p_focused +
+  geom_tiplab(
+    aes(label = abbr_tip(label)),
+    offset = 0.8,
+    size = 3,
+    fontface = "italic",
+    align = TRUE,
+    linetype = 0
+  ) +
+  xlim_tree(tree_focused_xmax + 3)
+
+# ATPα strip first
+p_focused = gheatmap(
+  p_focused,
+  atpa_strip_focused,
+  offset = 0.01,
+  width = 0.03,
+  colnames = FALSE,
+  color = NA
+) +
+  scale_fill_manual(
+    name = expression("ATP"*alpha*" state"),
+    values = atpa_palette,
+    breaks = c("VSH", "VSN", "LSN", "LAN"),
+    drop = FALSE
+  ) +
+  ggnewscale::new_scale_fill()
+
+# Asclepias-use strip second
+p_focused = gheatmap(
+  p_focused,
+  host_strip_focused,
+  offset = 0.16,
+  width = 0.03,
+  colnames = FALSE,
+  color = NA
+) +
+  scale_fill_manual(
+    name = "Host use",
+    values = ascl_palette,
+    breaks = c("asclepias", "no_asclepias"),
+    labels = c("Asclepias", "Non-Asclepias"),
+    drop = FALSE
+  ) +
+  ggnewscale::new_scale_fill()
+
+# ASR pies for strongly supported nodes only
+pies_ascl = nodepie(
+  ascl_asr_df_plot,
+  cols = c("no_asclepias", "asclepias"),
+  alpha = 1
+)
+
+pies_ascl = lapply(pies_ascl, function(g) {
+  g +
+    scale_fill_manual(values = ascl_palette) +
+    theme(legend.position = "none")
+})
+
+# final plot
+p_focused_final = inset(
+  p_focused,
+  pies_ascl,
+  width = 0.05,
+  height = 0.05
+) +
+  theme(
+    legend.position = c(-0.15, 1),
+    legend.justification = c(0, 1),
+    legend.box = "vertical",
+    legend.background = element_blank(),
+    legend.key.size = unit(0.35, "cm")
+  )
+
+p_focused_final
+
+ggsave("./Fig1_asr_focused.png", p_focused_final, width = 10, height = 10)
+```
+
+# Figures
+
+### Figure 1
+
+```{r}
+library(patchwork)
+
+right_col =
+  (p_focused_final / plot_spacer()) +
+  plot_layout(heights = c(1, 2))
+
+combined_plot =
+  (p_final | right_col) +
+  plot_layout(widths = c(2, 1))
+
+combined_plot
+
+ggsave("./Fig1.png", combined_plot, width = 11, height = 10)
+```
+
+# 6. Relevant notes
+
+1.  Phylogeny and ancestral state annotation with ggtree:
+
+    <https://guangchuangyu.github.io/ggtree-book/chapter-ggtree.html>
+
+    <https://www.randigriffin.com/2017/05/11/primate-phylogeny-ggtree.html>
+
+    <https://yulab-smu.top/treedata-book/chapter7.html>
+
+    <https://www.youtube.com/watch?v=VDQ-9fwtlqc>
+
+    <http://phytools.org/mexico2018/lec/Anc-states.pdf>
+
+    <https://www.phytools.org/eqg/Exercise_5.2/>
+
+2.  Ancestral sequence reconstruction:
+
+    Hyphy: <https://www.youtube.com/watch?v=4gcQ6CCTRIY>
+
+    Hyphy:
