@@ -14,5 +14,13 @@ plant_butterfly_long_all.csv, a curated dataset containing butterfly taxonomy, h
 
 Sequences were aligned, concatenated, and used to infer a maximum-likelihood phylogeny. The resulting tree was pruned to the 55 Danaini species and two outgroups with host-plant data for subsequent analyses.
 
+### 3. Host-plant association matrix (Extended Data Figure 1)
+
+3_reconstruct_hostplant_associations.Rmd generates Extended Data Figure 1 by combining the Danaini butterfly phylogeny reconstructed in this repository, genus-level Apocynaceae and Moraceae phylogenies, and the curated butterfly–host plant association matrix.
+
+The script first prunes and roots the Danaini phylogeny to include the 55 Danaini species and two Danainae outgroups with host-plant data. For the plant phylogenies, the script uses the time-calibrated Apocynaceae phylogeny from Fishbein et al. (2018), which was pruned to one representative species per genus and then renamed to generate a genus-level Apocynaceae tree. Moraceae relationships were based on a genus-level tree obtained from TimeTree, with genus names changed to current taxonomy where needed.
+
+The Apocynaceae and Moraceae trees were then pruned to the genera represented in the host-plant matrix and grafted into a combined plant phylogeny. The script also generates a butterfly species × plant genus presence/absence matrix and visualizes host use together with plant cardenolide occurrence and butterfly ATPα resistance states.
+
 Code and analysis by Marianna Karageorgi.
 
