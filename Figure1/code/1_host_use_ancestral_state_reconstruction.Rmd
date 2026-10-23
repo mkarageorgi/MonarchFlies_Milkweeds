@@ -1,0 +1,266 @@
+---
+title: "Figure 1: Host-use ancestral state reconstruction"
+author: "Naama Weksler & Marianna Karageorgi"
+date: "2026-10-23"
+output: html_document
+---
+
+# 1. Overview
+
+This notebook reconstructs the ancestral host use of Danaini along the butterfly
+phylogeny. It consumes two prepared inputs from Extended Data Figure 1 and does no
+raw-record processing of its own:
+
+- `../input_data/Danaini_in_HOSTS.newick` — the Danaini species tree (tips are the
+  species in the curated HOSTS dataset, including the outgroups *Mechanitis
+  polymnia* and *Heliconius erato*).
+- `../input_data/danaini_host_use_states.csv` — one host-use state per species,
+  produced by Extended Data Fig. 1 (`5_build_host_matrix.Rmd`): the native-range
+  *Asclepias* flag, the broader milkweed-clade flag, the host-use state coding, and
+  each species' ATPα genotype.
+
+Because the per-species states are already curated there, this notebook only joins
+them onto the tree and runs a **three-state** host-use reconstruction — `none` /
+milkweed clade (Asclepiadoideae & Secamonoideae) / native-range *Asclepias* — and
+draws the full-tree figure, mirroring the analysis previously in
+`Blanca_HOSTS_milkweed_asclepias_ASR.Rmd`. The ATPα-focused figure, which reuses the
+node probabilities written here, now lives in `../../Figure2/`.
+
+Before reconstructing, internal branches with bootstrap support below
+`SUPPORT_CUTOFF` (70) are collapsed into polytomies, so the reconstruction does not
+assert ancestral states at splits the phylogeny does not resolve. The Mk model is
+refit on this collapsed tree and the node pies are drawn on it.
+
+Node probabilities are written to `../output_data/`; figures to `../visuals/`.
+
+```{r setup, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(ape)
+library(phytools)
+library(ggtree)
+library(ggnewscale)
+
+dir.create("../output_data", showWarnings = FALSE)
+dir.create("../visuals", showWarnings = FALSE)
+
+clean_name <- function(x) {
+  stringr::str_squish(stringr::str_replace_all(as.character(x), "_", " "))
+}
+
+# "Danaus plexippus" -> "D. plexippus" for tip labels
+abbr_tip <- function(x) {
+  x <- clean_name(x)
+  vapply(x, function(z) {
+    parts <- strsplit(z, " ")[[1]]
+    if (length(parts) >= 2 && nchar(parts[1]) > 0)
+      paste0(substr(parts[1], 1, 1), ". ", parts[2]) else z
+  }, character(1))
+}
+
+# Collapse weakly-supported internal branches into polytomies. Node support
+# (bootstrap, 0-100) rides on $node.label. We zero the branches subtending
+# below-threshold nodes and let di2multi() merge them, which leaves every retained
+# branch length — and therefore the Mk model fit in Section 4 — untouched. The root
+# is never collapsed. Nodes with no / non-numeric support are left in place.
+SUPPORT_CUTOFF <- 70
+
+collapse_low_support <- function(phy, cutoff = SUPPORT_CUTOFF) {
+  if (is.null(phy$node.label)) return(phy)
+  supp     <- suppressWarnings(as.numeric(phy$node.label))
+  internal <- (ape::Ntip(phy) + 1):(ape::Ntip(phy) + phy$Nnode)
+  low      <- setdiff(internal[!is.na(supp) & supp < cutoff], ape::Ntip(phy) + 1)
+  if (!length(low)) return(phy)
+  phy$edge.length[phy$edge[, 2] %in% low] <- 0
+  ape::di2multi(phy, tol = 1e-8)
+}
+
+# Shared palettes
+full_palette <- c("none" = "grey90", "milkweed" = "#d7c0dd",
+                  "asclepias" = "#65338f")
+two_palette  <- c("none" = "grey90", "asclepias" = "#65338f")
+```
+
+# 2. Read the tree and the per-species host-use states
+
+Each tree tip is assigned its host-use state from `danaini_host_use_states.csv`.
+A tip that has **no row** in that table has no documented host record in the
+curated HOSTS dataset (here, *Anetia thirza*); following the Figure 1 convention
+it is coded `none` — no documented milkweed / *Asclepias* use.
+
+```{r read-inputs}
+tree_asr <- ape::read.tree("../input_data/Danaini_in_HOSTS.newick")
+tree_asr$tip.label <- clean_name(tree_asr$tip.label)
+
+# Collapse internal branches with bootstrap support < SUPPORT_CUTOFF into
+# polytomies before anything downstream, so the reference ordering, the Mk fit, and
+# the node pies all describe the same reduced-resolution tree.
+n_nodes_before <- tree_asr$Nnode
+tree_asr <- collapse_low_support(tree_asr)
+cat("Collapsed", n_nodes_before - tree_asr$Nnode,
+    "internal node(s) with support <", SUPPORT_CUTOFF, "into polytomies; ",
+    tree_asr$Nnode, "of", n_nodes_before, "internal nodes remain.\n")
+
+# Orient the tree to the curated reference order used by the earlier reconstruction
+# (and by Extended Data Fig. 1 / Figure 2) rather than ladderizing: rotate internal
+# nodes so the tips read top-to-bottom in that order. Rotation changes only the
+# display, not the topology or branch lengths. Heliconius erato is absent from the
+# reference tree, so it is placed at the base alongside the other outgroups.
+reference_tree <- ape::read.tree("../input_data/danaini_reference_order.newick")
+reference_tree$tip.label <- clean_name(reference_tree$tip.label)
+reference_order <- {
+  d <- ggtree(reference_tree, ladderize = FALSE)$data
+  d <- d[d$isTip, ]
+  clean_name(d$label[order(d$y, decreasing = TRUE)])
+}
+reference_order <- c(reference_order, "Heliconius erato")
+tree_asr <- ape::rotateConstr(
+  tree_asr, rev(intersect(reference_order, tree_asr$tip.label))
+)
+
+states_raw <- read.csv(
+  "../input_data/danaini_host_use_states.csv",
+  stringsAsFactors = FALSE
+) %>%
+  mutate(butterfly_species = clean_name(butterfly_species))
+
+# One row per tree tip; tips absent from the states table are coded "none".
+host_states_tbl <- tibble(butterfly_species = tree_asr$tip.label) %>%
+  left_join(states_raw, by = "butterfly_species") %>%
+  mutate(
+    has_milkweed         = tidyr::replace_na(as.logical(has_asclepiad_secamonoid), FALSE),
+    has_asclepias_native = tidyr::replace_na(as.logical(has_asclepias_native), FALSE),
+    host_use = case_when(
+      has_asclepias_native ~ "asclepias",   # native-range Asclepias
+      has_milkweed         ~ "milkweed",    # broader milkweed clade
+      TRUE                 ~ "none"
+    )
+  )
+
+cat("Tree tips:", length(tree_asr$tip.label), "\n")
+cat("Tips coded 'none' because absent from the states table:",
+    paste(setdiff(tree_asr$tip.label, states_raw$butterfly_species),
+          collapse = ", "), "\n")
+```
+
+# 3. Host-use tip-bar helper
+
+```{r helpers}
+# Two host-use bars (milkweed-clade use, native-Asclepias use) on the shared
+# three-level scale, for any (sub)tree.
+host_bars_for <- function(tree_f) {
+  host_states_tbl %>%
+    filter(butterfly_species %in% tree_f$tip.label) %>%
+    transmute(
+      butterfly_species,
+      milkweed_use  = factor(if_else(has_milkweed, "milkweed", "none"),
+                             levels = c("none", "milkweed", "asclepias")),
+      asclepias_use = factor(if_else(has_asclepias_native, "asclepias", "none"),
+                             levels = c("none", "milkweed", "asclepias"))
+    ) %>%
+    column_to_rownames("butterfly_species") %>%
+    { .[tree_f$tip.label, , drop = FALSE] }
+}
+```
+
+# 4. Three-state ancestral state reconstruction
+
+States: `none`, `milkweed` (any Asclepiadoideae / Secamonoideae genus), and
+`asclepias` (an *Asclepias* record whose butterfly's native range overlaps
+*Asclepias*). Priority: native *Asclepias* > milkweed clade > none.
+
+The transition model is selected by AIC among equal-rates (`ER`), symmetric
+(`SYM`), and all-rates-different (`ARD`) Mk models. The reconstruction uses **`SYM`**:
+it fits the data better than `ER` (lower AIC). 
+
+```{r asr-three}
+states_three <- factor(
+  setNames(host_states_tbl$host_use, host_states_tbl$butterfly_species)[tree_asr$tip.label],
+  levels = c("none", "milkweed", "asclepias")
+)
+names(states_three) <- tree_asr$tip.label
+
+cat("Three-state counts:\n"); print(table(states_three, useNA = "ifany"))
+stopifnot(identical(names(states_three), tree_asr$tip.label),
+          !any(is.na(states_three)))
+
+# Model selection by AIC (lower = better).
+mk_fits <- lapply(c(ER = "ER", SYM = "SYM", ARD = "ARD"),
+                  function(m) phytools::fitMk(tree_asr, states_three, model = m))
+cat("Mk transition-model AIC (lower = better):\n")
+print(round(sort(sapply(mk_fits, AIC)), 2))
+
+# Use the symmetric model (best-supported, and free of ER's uniform-equilibrium
+# bias toward the rare `asclepias` state).
+fit_three <- mk_fits[["SYM"]]
+anc_three <- phytools::ancr(fit_three)
+
+asr_three <- as.data.frame(anc_three$ace)
+asr_three$node <- (length(tree_asr$tip.label) + 1):
+  (length(tree_asr$tip.label) + tree_asr$Nnode)
+asr_three <- asr_three %>% mutate(milkweed_combined = milkweed + asclepias)
+
+# Write the node probabilities with the milkweed-clade columns spelled out in full
+# (the figures above keep the short "milkweed" key internally). The combined column
+# is the milkweed clade plus native-range Asclepias.
+asr_out <- asr_three %>%
+  rename(`Asclepiadoideae & Secamonoideae` = milkweed,
+         `Asclepiadoideae & Secamonoideae + Asclepias` = milkweed_combined)
+write.csv(asr_out,
+          "../output_data/host_use_milkweed_asclepias_ASR_node_probabilities.csv",
+          row.names = FALSE)
+head(asr_out)
+```
+
+# 5. Full three-state figure (two tip bars + node pies)
+
+A cladogram with two vertical tip bars sharing one combined legend — an inner bar
+for milkweed-clade use and an outer bar for native *Asclepias* use — and
+three-state ancestral pies on every internal node.
+
+```{r figure-three, fig.width=10, fig.height=13}
+bars <- host_bars_for(tree_asr)
+milkweed_strip  <- bars[, "milkweed_use",  drop = FALSE]
+asclepias_strip <- bars[, "asclepias_use", drop = FALSE]
+
+p <- ggtree(tree_asr, branch.length = "none", ladderize = FALSE,
+            size = 0.3, color = "grey40")
+tree_xmax <- max(p$data$x, na.rm = TRUE)
+
+# Both bars share one fill scale -> one combined legend
+p <- gheatmap(p, milkweed_strip, offset = 0.01, width = 0.04,
+              colnames = FALSE, color = NA)
+p <- gheatmap(p, asclepias_strip, offset = tree_xmax * 0.06, width = 0.04,
+              colnames = FALSE, color = NA) +
+  scale_fill_manual(
+    name   = "Host use",
+    values = full_palette,
+    breaks = c("asclepias", "milkweed", "none"),
+    labels = c(expression(paste(italic("Asclepias"), " (native range)")),
+               expression("Asclepiadoideae & Secamonoideae"),
+               expression("Non-milkweed")),
+    drop   = FALSE
+  ) +
+  guides(fill = guide_legend(order = 1)) +
+  ggnewscale::new_scale_fill()
+
+p <- p +
+  geom_tiplab(aes(label = abbr_tip(label)), offset = tree_xmax * 0.14,
+              size = 2.6, fontface = "italic", align = TRUE, linetype = 0) +
+  xlim_tree(tree_xmax + 6)
+
+pies <- nodepie(asr_three, cols = c("none", "milkweed", "asclepias"), alpha = 1)
+pies <- lapply(pies, function(g)
+  g + scale_fill_manual(values = full_palette) + theme(legend.position = "none"))
+
+p_final <- inset(p, pies, width = 0.035, height = 0.035) +
+  coord_cartesian(clip = "off") +
+  theme(legend.position = c(0.06, 0.96), legend.justification = c(0, 1),
+        legend.box = "vertical", legend.background = element_blank(),
+        legend.key.size = unit(0.35, "cm"))
+
+p_final
+ggsave("../visuals/host_use_milkweed_asclepias_ASR.png",
+       p_final, width = 10, height = 13)
+```

@@ -10,7 +10,7 @@ output: html_document
 This notebook quantifies phylogenetic signal in host use with the Fritz & Purvis
 (2010) **D-statistic** (`caper::phylo.d`), the appropriate metric for a binary
 trait. It uses the same prepared inputs as the Figure 1 ancestral state
-reconstruction (`../../Figure_1/code/1_host_use_ancestral_state_reconstruction.Rmd`),
+reconstruction (`../../Figure1/code/1_host_use_ancestral_state_reconstruction.Rmd`),
 so the signal test and the reconstruction rest on the same tree and host-use data:
 
 - `../input_data/Danaini_in_HOSTS.newick` — the Danaini species tree.

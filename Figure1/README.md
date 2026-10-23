@@ -1,19 +1,70 @@
-## Figure 1
+# Figure 1 — Host-use ancestral state reconstruction across Danaini
 
-This code reproduces Figure 1.
+Code and data for Figure 1: reconstruction of ancestral host use (none / milkweed
+clade / native-range *Asclepias*) along the Danaini butterfly phylogeny.
 
-## 4. Phylogenetic signal in milkweed-clade host use
+A single notebook, built on prepared inputs carried over from Extended Data Figure 1
+(so Figure 1, Extended Data Fig. 1, and Extended Data Fig. 2 all rest on the same
+curated host-use data and the same butterfly tree):
 
-4_hostplant_phylogenetic_signal.Rmd estimates phylogenetic signal in milkweed-clade host use across Danaini butterflies using Pagel’s λ. Milkweed-clade use was coded as a binary trait indicating whether each butterfly species has at least one recorded larval host plant in Asclepiadoideae or Secamonoideae.
+- **`code/1_host_use_ancestral_state_reconstruction.Rmd`** — a three-state host-use
+  ancestral state reconstruction (none / milkweed clade / native *Asclepias*),
+  fitted with a symmetric (`SYM`) Mk model selected by AIC, with the full-tree
+  figure.
 
-## 5. Host-use ancestral state reconstruction and Figure 1
+The ATPα-focused figure reuses this reconstruction and lives in `../Figure2/`. The
+related phylogenetic-signal (Fritz & Purvis D-statistic) analysis lives in
+`../Extended_Data_Figure2/`.
 
-5_host_use_ancestral_state_reconstruction.Rmd performs ancestral state reconstruction of Danaini host-plant use and generates Figure 1. The analysis uses the curated host-plant association dataset and the Danaini phylogeny.
+The notebook runs with the working directory at `code/`; all paths are relative to
+that folder.
 
-For the broad Danaini analysis, host use was coded as a three-state trait: `none`, `milkweed`, or `asclepias`. Species were coded as using the milkweed clade if they had at least one recorded larval host in Asclepiadoideae or Secamonoideae, and as using *Asclepias* if they had at least one recorded larval host in the genus *Asclepias*. Ancestral states were reconstructed using a maximum-likelihood Mk model with equal transition rates.
+## Directory layout
 
-The R Markdown file also generates a focused subset of species with both ATPα state information and host-use data. For this subset, *Asclepias* use was reconstructed as a binary trait and visualized alongside observed ATPα resistance states.
+```
+Figure1/
+├── README.md
+├── code/
+│   └── 1_host_use_ancestral_state_reconstruction.Rmd
+├── input_data/
+│   ├── Danaini_in_HOSTS.newick          # Danaini species tree (from Extended Data Fig. 1)
+│   ├── danaini_reference_order.newick   # curated tip order shared with Ext. Fig. 1 / Figure 2
+│   └── danaini_host_use_states.csv      # per-species host-use states + ATPα (from Ext. Fig. 1 notebook 5)
+├── output_data/
+│   └── host_use_milkweed_asclepias_ASR_node_probabilities.csv   # 3-state ASR node probabilities
+└── visuals/
+    └── host_use_milkweed_asclepias_ASR.png          # full-tree 3-state reconstruction
+```
 
+## Inputs (prepared in Extended Data Figure 1)
 
+All three inputs are copied from `../Extended_Data_Figure1/`:
 
-Code and analysis by Marianna Karageorgi & Naama Weksler.
+- **`Danaini_in_HOSTS.newick`** — the filtered Danaini ML tree (56 tips, including
+  the outgroups *Mechanitis polymnia* and *Heliconius erato*).
+- **`danaini_host_use_states.csv`** — one host-use state per species (the
+  native-range *Asclepias* flag, the milkweed-clade flag, the collapsed state
+  coding, and the ATPα genotype).
+- **`danaini_reference_order.newick`** — the curated tip order (shared with
+  Extended Data Fig. 1 and Figure 2); the notebook rotates the tree to this order so
+  the figures match the orientation used elsewhere.
+
+A tree tip with no row in the host-use table (here *Anetia thirza*) has no
+documented host record and is coded as no milkweed / *Asclepias* use.
+
+## Model note
+
+The three-state reconstruction uses a **symmetric (`SYM`)** Mk model, chosen by AIC
+over equal-rates (`ER`) and all-rates-different (`ARD`). `ER` is a markedly worse
+fit and, because its equal rates imply a uniform equilibrium, inflates the rare
+`asclepias` state at deep nodes (root `asclepias` ≈ 0.29 under `ER` vs ≈ 0.05 under
+`SYM`); the notebook prints the AIC comparison.
+
+## Running
+
+```r
+setwd("<path>/Figure1/code")
+rmarkdown::render("1_host_use_ancestral_state_reconstruction.Rmd")
+```
+
+R package dependencies: `tidyverse`, `ape`, `phytools`, `ggtree`, `ggnewscale`.
