@@ -1,0 +1,447 @@
+---
+title: "Extended Data Figure 2: Phylogenetic signal in host use (Fritz & Purvis D-statistic)"
+author: "Naama Weksler"
+date: "2026-10-23"
+output: html_document
+---
+
+# 1. Overview
+
+This notebook quantifies phylogenetic signal in host use with the Fritz & Purvis
+(2010) **D-statistic** (`caper::phylo.d`), the appropriate metric for a binary
+trait. It uses the same prepared inputs as the Figure 1 ancestral state
+reconstruction (`../../Figure_1/code/1_host_use_ancestral_state_reconstruction.Rmd`),
+so the signal test and the reconstruction rest on the same tree and host-use data:
+
+- `../input_data/Danaini_in_HOSTS.newick` — the Danaini species tree.
+- `../input_data/Ext_fig1_host_associations.csv` — the butterfly-species ×
+  plant-genus associations from Extended Data Fig. 1, carrying each association's
+  plant subfamily and family. Every row is a documented (present) association.
+
+The headline test is **milkweed-clade** host use (Sections 3–5). Section 7 repeats
+it for five further host groups (the non-milkweed Apocynaceae subfamilies, each on
+its own, and Moraceae), all from the same association table.
+
+```{r setup, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(ape)
+library(caper)
+library(ggtree)
+library(ggplot2)
+
+dir.create("../output_data", showWarnings = FALSE)
+dir.create("../visuals", showWarnings = FALSE)
+
+# Canonical tip formatter: spaces -> underscores (matches the saved tree tips)
+to_tip <- function(x) {
+  stringr::str_replace_all(stringr::str_trim(as.character(x)), "[[:space:]]+", "_")
+}
+
+# "Danaus_plexippus" -> "D. plexippus" for plotting
+abbr_tip <- function(x) {
+  x <- stringr::str_squish(stringr::str_replace_all(as.character(x), "_", " "))
+  vapply(x, function(z) {
+    parts <- strsplit(z, " ")[[1]]
+    if (length(parts) >= 2 && nchar(parts[1]) > 0)
+      paste0(substr(parts[1], 1, 1), ". ", parts[2]) else z
+  }, character(1))
+}
+```
+
+# 2. Read and prepare the phylogeny
+
+`caper::phylo.d` requires (i) no labels shared between tips and internal nodes and
+(ii) no zero-length internal branches. We strip the bootstrap node labels and, if
+any internal branch has length zero, nudge it to a tiny positive value (1e-8,
+far below the smallest positive branch length) so the dichotomous topology is
+preserved rather than collapsed to a polytomy.
+
+```{r read-tree}
+tree0 <- ape::read.tree("../input_data/Danaini_in_HOSTS.newick")
+tree0$tip.label <- to_tip(tree0$tip.label)
+
+# (i) remove support labels shared with tips
+tree0$node.label <- NULL
+
+# (ii) nudge any zero-length internal branches (topology preserved)
+n_zero <- sum(tree0$edge.length == 0)
+tree0$edge.length[tree0$edge.length == 0] <- 1e-8
+
+# (iii) orient the tree to the curated reference order (shared with Extended Data
+# Fig. 1 / Figure 2 and the ASR notebook) so the trait-on-tree figures match that
+# orientation. Rotation changes only the display, not the D-statistic (which is
+# order-independent) or the topology. Heliconius erato is absent from the reference
+# tree, so it is placed at the base with the other outgroups.
+reference_tree <- ape::read.tree("../input_data/danaini_reference_order.newick")
+reference_tree$tip.label <- to_tip(reference_tree$tip.label)
+reference_order <- {
+  d <- ggtree(reference_tree, ladderize = FALSE)$data
+  d <- d[d$isTip, ]
+  to_tip(d$label[order(d$y, decreasing = TRUE)])
+}
+reference_order <- c(reference_order, "Heliconius_erato")
+tree0 <- ape::rotateConstr(tree0, rev(intersect(reference_order, tree0$tip.label)))
+
+cat("Tree tips:", length(tree0$tip.label),
+    "| rooted:", ape::is.rooted(tree0),
+    "| dichotomous:", ape::is.binary(tree0),
+    "| zero-length branches nudged:", n_zero, "\n")
+```
+
+# 3. Build the binary milkweed-clade trait
+
+```{r read-assoc}
+milkweed_subfams <- c("Asclepiadoideae", "Secamonoideae")
+
+assoc <- read.csv(
+  "../input_data/Ext_fig1_host_associations.csv",
+  stringsAsFactors = FALSE
+) %>%
+  mutate(butterfly_species = to_tip(butterfly_species))
+```
+
+```{r build-trait}
+# milkweed = 1 if the species has >= 1 association in the milkweed clade.
+trait_df <- assoc %>%
+  group_by(butterfly_species) %>%
+  summarise(milkweed = as.integer(any(plant_subfamily %in% milkweed_subfams)),
+            .groups = "drop")
+
+# Every tree tip needs a value; tips absent from the association table are coded 0.
+trait_full <- tibble(butterfly_species = tree0$tip.label) %>%
+  left_join(trait_df, by = "butterfly_species") %>%
+  mutate(milkweed = tidyr::replace_na(milkweed, 0L)) %>%
+  as.data.frame()
+
+cat("Trait distribution (milkweed use):\n"); print(table(trait_full$milkweed))
+cat("Tree tips absent from the association table (coded 0):\n")
+print(setdiff(tree0$tip.label, trait_df$butterfly_species))
+```
+
+# 4. Fritz & Purvis D-statistic
+
+```{r phylo-d}
+set.seed(1)  # phylo.d permutes/simulates; fix the seed for reproducibility
+
+fit_d <- caper::phylo.d(
+  data = trait_full, phy = tree0,
+  names.col = butterfly_species, binvar = milkweed, permut = 1000
+)
+fit_d
+
+sink("../output_data/fritz_purvis_D_milkweed_phylo_signal.txt")
+print(fit_d)
+sink()
+```
+
+**Interpretation.** The D-statistic measures how a binary trait is distributed
+across a phylogeny relative to two reference models: **D ≈ 0** = as clumped as a
+Brownian threshold model (phylogenetically conserved); **D ≈ 1** = random with
+respect to the phylogeny; **D < 0** = more clumped than Brownian; **D > 1** =
+overdispersed. **P(D = 1)** tests departure from random (small = significant
+signal); **P(D = 0)** tests departure from the Brownian expectation.
+
+# 5. Visualization
+
+## 5.1 D relative to the random and Brownian null distributions
+
+```{r fig-nulldist, fig.width=8, fig.height=5}
+d_obs <- unname(fit_d$DEstimate)
+
+# caper stores permutation values on the raw sum-of-changes scale; rescale linearly
+# so Brownian ~ 0 and random ~ 1 (the interpretable D axis).
+mean_brown <- mean(fit_d$Permutations$brownian)
+mean_rand  <- mean(fit_d$Permutations$random)
+to_D <- function(x) (x - mean_brown) / (mean_rand - mean_brown)
+
+null_df <- bind_rows(
+  tibble(D = to_D(as.numeric(fit_d$Permutations$random)),   model = "Random (no signal)"),
+  tibble(D = to_D(as.numeric(fit_d$Permutations$brownian)), model = "Brownian (conserved)")
+) %>%
+  mutate(model = factor(model, levels = c("Brownian (conserved)", "Random (no signal)")))
+
+null_palette <- c("Brownian (conserved)" = "#65338f", "Random (no signal)" = "grey65")
+
+# The observed D and its p-values are exported to the summary table (Section 7.7),
+# not drawn on the figure; the vertical line marks the observed D on the plot.
+p_null <- ggplot(null_df, aes(D, fill = model, colour = model)) +
+  geom_density(alpha = 0.45, linewidth = 0.3) +
+  geom_vline(xintercept = d_obs, linewidth = 0.8, colour = "black") +
+  scale_fill_manual(values = null_palette, name = NULL) +
+  scale_colour_manual(values = null_palette, name = NULL) +
+  labs(title = "Phylogenetic signal in milkweed-clade host use (Fritz & Purvis D)",
+       x = "D statistic", y = "Density") +
+  theme_classic(base_size = 12) +
+  theme(legend.position = "right")
+
+p_null
+ggsave("../visuals/hostplant_phylo_signal_D_nulldist.png",
+       p_null, width = 8, height = 5, dpi = 300)
+```
+
+## 5.2 Milkweed-clade use mapped on the phylogeny
+
+```{r fig-trait-tree, fig.width=9, fig.height=11}
+trait_strip <- data.frame(
+  milkweed = factor(ifelse(trait_full$milkweed == 1L, "milkweed", "none"),
+                    levels = c("none", "milkweed")),
+  row.names = trait_full$butterfly_species
+)
+trait_strip <- trait_strip[tree0$tip.label, , drop = FALSE]
+
+pt <- ggtree(tree0, branch.length = "none", ladderize = FALSE,
+             size = 0.3, color = "grey40")
+tree_xmax <- max(pt$data$x, na.rm = TRUE)
+
+pt <- gheatmap(pt, trait_strip, offset = 0.01, width = 0.04,
+               colnames = FALSE, color = NA) +
+  scale_fill_manual(
+    name   = "Milkweed-clade use",
+    values = c("milkweed" = "#65338f", "none" = "grey90"),
+    breaks = c("milkweed", "none"),
+    labels = c("Asclepiadoideae & Secamonoideae", "Non-milkweed"),
+    drop   = FALSE
+  ) +
+  theme(legend.position = c(0.08, 0.92), legend.justification = c(0, 1),
+        legend.background = element_blank(), legend.key.size = unit(0.35, "cm"))
+
+pt <- pt +
+  geom_tiplab(aes(label = abbr_tip(label)), offset = tree_xmax * 0.10,
+              size = 2.4, fontface = "italic", align = TRUE, linetype = 0) +
+  xlim_tree(tree_xmax + 9)
+
+pt
+ggsave("../visuals/hostplant_phylo_signal_trait_tree.png",
+       pt, width = 9, height = 11, dpi = 300)
+```
+
+# 6. Justification for the trait coding
+
+- **The trait is binary, not continuous.** Host use is presence/absence of an
+  association with a host group, a discrete state. Fritz & Purvis's D was
+  developed for binary traits (evaluated against random and Brownian threshold
+  expectations); Pagel's λ, by contrast, is for continuously distributed traits
+  and is not appropriate here.
+
+- **Source consistency with the reconstruction.** The trait is built from the same
+  Extended Data Fig. 1 association table that underlies the ancestral state
+  reconstruction, so the two analyses are directly comparable. Because that table
+  applies Figure 1's native-range *Asclepias* rule, a species whose only milkweed
+  record is a non-native *Asclepias* association is coded `0` here, matching the
+  reconstruction.
+
+- **Presence threshold (≥ 1 record).** A documented association is treated as
+  evidence of use: a species is coded `1` for a host group if it has at least one
+  recorded association in that group.
+
+- **Definition of the milkweed clade.** The subfamilies **Asclepiadoideae** and
+  **Secamonoideae**, the monophyletic milkweed lineage within Apocynaceae.
+
+- **The `0` state.** A species is coded `0` for a host group when it has documented
+  host use outside that group, or when it is absent from the association table
+  (the outgroups and any ingroup tip with no Apocynaceae/Moraceae association). All
+  tree tips are retained.
+
+# 7. Phylogenetic signal for additional host groups
+
+The milkweed-clade analysis (Sections 3–5) is repeated verbatim — same tree, same
+≥ 1-record presence coding, same `caper::phylo.d` call and the same two figures —
+for five further host groups: the non-milkweed Apocynaceae subfamilies combined,
+each of them alone (Periplocoideae, Apocynoideae, Rauvolfioideae), and Moraceae.
+
+## 7.1 Reusable helper
+
+```{r group-signal-helper}
+# Linear rescaling of caper's raw permutation values onto the D axis (Section 5.1).
+rescale_to_D <- function(fit) {
+  mean_brown <- mean(fit$Permutations$brownian)
+  mean_rand  <- mean(fit$Permutations$random)
+  function(x) (x - mean_brown) / (mean_rand - mean_brown)
+}
+
+# predicate: function of the association data frame returning a logical vector
+#            (TRUE = the row counts as use of this host group).
+# slug:      filename stem; title: plot title; use_label: legend label for "use".
+run_group_signal <- function(predicate, slug, title, use_label,
+                             fig_nulldist = TRUE, fig_tree = TRUE) {
+  assoc_use <- assoc
+  assoc_use$.use <- as.logical(predicate(assoc))
+  trait_df <- assoc_use %>%
+    group_by(butterfly_species) %>%
+    summarise(trait = as.integer(any(.use)), .groups = "drop")
+
+  trait_full <- tibble(butterfly_species = tree0$tip.label) %>%
+    left_join(trait_df, by = "butterfly_species") %>%
+    mutate(trait = tidyr::replace_na(trait, 0L)) %>%
+    as.data.frame()
+
+  cat("## ", title, "\n", sep = "")
+  cat("Trait distribution (", slug, "):\n", sep = ""); print(table(trait_full$trait))
+
+  set.seed(1)
+  fit <- caper::phylo.d(
+    data = trait_full, phy = tree0,
+    names.col = butterfly_species, binvar = trait, permut = 1000
+  )
+  print(fit)
+
+  sink(sprintf("../output_data/fritz_purvis_D_%s_phylo_signal.txt", slug))
+  cat(title, "\n\n"); print(fit)
+  sink()
+
+  if (fig_nulldist) {
+    d_obs <- unname(fit$DEstimate)
+    to_D  <- rescale_to_D(fit)
+    null_df <- bind_rows(
+      tibble(D = to_D(as.numeric(fit$Permutations$random)),   model = "Random (no signal)"),
+      tibble(D = to_D(as.numeric(fit$Permutations$brownian)), model = "Brownian (conserved)")
+    ) %>%
+      mutate(model = factor(model, levels = c("Brownian (conserved)", "Random (no signal)")))
+
+    # D and p-values go to the summary table (Section 7.7), not onto the figure.
+    p_null <- ggplot(null_df, aes(D, fill = model, colour = model)) +
+      geom_density(alpha = 0.45, linewidth = 0.3) +
+      geom_vline(xintercept = d_obs, linewidth = 0.8, colour = "black") +
+      scale_fill_manual(values = c("Brownian (conserved)" = "#65338f",
+                                   "Random (no signal)" = "grey65"), name = NULL) +
+      scale_colour_manual(values = c("Brownian (conserved)" = "#65338f",
+                                     "Random (no signal)" = "grey65"), name = NULL) +
+      labs(title = sprintf("Phylogenetic signal in %s (Fritz & Purvis D)", title),
+           x = "D statistic", y = "Density") +
+      theme_classic(base_size = 12) +
+      theme(legend.position = "right")
+
+    print(p_null)
+    ggsave(sprintf("../visuals/hostplant_phylo_signal_D_nulldist_%s.png", slug),
+           p_null, width = 8, height = 5, dpi = 300)
+  }
+
+  if (fig_tree) {
+    trait_strip <- data.frame(
+      use = factor(ifelse(trait_full$trait == 1L, "use", "none"),
+                   levels = c("none", "use")),
+      row.names = trait_full$butterfly_species
+    )
+    trait_strip <- trait_strip[tree0$tip.label, , drop = FALSE]
+
+    pt <- ggtree(tree0, branch.length = "none", ladderize = FALSE,
+                 size = 0.3, color = "grey40")
+    tree_xmax <- max(pt$data$x, na.rm = TRUE)
+
+    pt <- gheatmap(pt, trait_strip, offset = 0.01, width = 0.04,
+                   colnames = FALSE, color = NA) +
+      scale_fill_manual(name = "Host use",
+                        values = c("use" = "#65338f", "none" = "grey90"),
+                        breaks = c("use", "none"),
+                        labels = c(use_label, "No association"), drop = FALSE) +
+      theme(legend.position = c(0.08, 0.92), legend.justification = c(0, 1),
+            legend.background = element_blank(), legend.key.size = unit(0.35, "cm"))
+
+    pt <- pt +
+      geom_tiplab(aes(label = abbr_tip(label)), offset = tree_xmax * 0.10,
+                  size = 2.4, fontface = "italic", align = TRUE, linetype = 0) +
+      xlim_tree(tree_xmax + 9)
+
+    print(pt)
+    ggsave(sprintf("../visuals/hostplant_phylo_signal_trait_tree_%s.png", slug),
+           pt, width = 9, height = 11, dpi = 300)
+  }
+
+  invisible(fit)
+}
+```
+
+## 7.2 Non-milkweed Apocynaceae (Periplocoideae + Apocynoideae + Rauvolfioideae)
+
+```{r signal-nonmilkweed-apocynaceae, fig.width=8, fig.height=5}
+nonmilkweed_subfams <- c("Periplocoideae", "Apocynoideae", "Rauvolfioideae")
+fit_nonmilkweed <- run_group_signal(
+  predicate = function(df) df$plant_subfamily %in% nonmilkweed_subfams,
+  slug      = "nonmilkweed_apocynaceae",
+  title     = "non-milkweed Apocynaceae (Periploc.+Apocyn.+Rauvolf.) host use",
+  use_label = "Periplocoideae, Apocynoideae & Rauvolfioideae"
+)
+```
+
+## 7.3 Periplocoideae
+
+```{r signal-periplocoideae, fig.width=8, fig.height=5}
+fit_periplocoideae <- run_group_signal(
+  predicate = function(df) df$plant_subfamily %in% "Periplocoideae",
+  slug = "periplocoideae", title = "Periplocoideae host use",
+  use_label = "Periplocoideae"
+)
+```
+
+## 7.4 Apocynoideae
+
+```{r signal-apocynoideae, fig.width=8, fig.height=5}
+fit_apocynoideae <- run_group_signal(
+  predicate = function(df) df$plant_subfamily %in% "Apocynoideae",
+  slug = "apocynoideae", title = "Apocynoideae host use",
+  use_label = "Apocynoideae"
+)
+```
+
+## 7.5 Rauvolfioideae
+
+```{r signal-rauvolfioideae, fig.width=8, fig.height=5}
+fit_rauvolfioideae <- run_group_signal(
+  predicate = function(df) df$plant_subfamily %in% "Rauvolfioideae",
+  slug = "rauvolfioideae", title = "Rauvolfioideae host use",
+  use_label = "Rauvolfioideae"
+)
+```
+
+## 7.6 Moraceae
+
+```{r signal-moraceae, fig.width=8, fig.height=5}
+fit_moraceae <- run_group_signal(
+  predicate = function(df) df$plant_family %in% "Moraceae",
+  slug = "moraceae", title = "Moraceae host use",
+  use_label = "Moraceae"
+)
+```
+
+## 7.7 Summary of D across host groups
+
+```{r signal-summary}
+signal_summary <- tibble::tribble(
+  ~host_group,                                              ~fit,
+  "Milkweed clade (Asclepiadoideae & Secamonoideae)",       list(fit_d),
+  "Non-milkweed Apocynaceae (Periploc.+Apocyn.+Rauvolf.)",  list(fit_nonmilkweed),
+  "Periplocoideae",                                         list(fit_periplocoideae),
+  "Apocynoideae",                                           list(fit_apocynoideae),
+  "Rauvolfioideae",                                         list(fit_rauvolfioideae),
+  "Moraceae",                                               list(fit_moraceae)
+) %>%
+  mutate(
+    D         = vapply(fit, function(f) unname(f[[1]]$DEstimate), numeric(1)),
+    `P(D=1)`  = vapply(fit, function(f) f[[1]]$Pval1, numeric(1)),
+    `P(D=0)`  = vapply(fit, function(f) f[[1]]$Pval0, numeric(1)),
+    n_present = vapply(fit, function(f) as.integer(f[[1]]$StatesTable["1"]), integer(1))
+  ) %>%
+  dplyr::select(-fit) %>%
+  # Benjamini-Hochberg FDR correction across the six host groups, applied within
+  # each p-value family separately. P(D=1) tests for phylogenetic signal (departure
+  # from a random distribution) and is the test of interest; P(D=0) tests departure
+  # from the Brownian expectation. A permutation p-value of 0 means < 1/1000.
+  mutate(
+    `P(D=1)_BH` = p.adjust(`P(D=1)`, method = "BH"),
+    `P(D=0)_BH` = p.adjust(`P(D=0)`, method = "BH")
+  ) %>%
+  dplyr::select(host_group, n_present, D,
+                `P(D=1)`, `P(D=1)_BH`, `P(D=0)`, `P(D=0)_BH`)
+
+knitr::kable(signal_summary, digits = 3,
+             caption = paste("Fritz & Purvis D-statistic across host groups,",
+                             "with Benjamini-Hochberg (FDR) corrected p-values"))
+
+# All numeric results (D, raw and BH-corrected p-values, n) live in this table, so
+# the figures carry no on-plot statistics; add them when assembling the panel.
+write.csv(signal_summary,
+          "../output_data/fritz_purvis_D_host_group_summary.csv",
+          row.names = FALSE)
+```

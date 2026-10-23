@@ -1,0 +1,7 @@
+"host_group","n_present","D","P(D=1)","P(D=1)_BH","P(D=0)","P(D=0)_BH"
+"Milkweed clade (Asclepiadoideae & Secamonoideae)",33,0.240698814534801,0,0,0.201,0.3015
+"Non-milkweed Apocynaceae (Periploc.+Apocyn.+Rauvolf.)",22,0.59163790632486,0.018,0.027,0.012,0.036
+"Periplocoideae",7,1.02628623627213,0.526,0.526,0.002,0.012
+"Apocynoideae",17,0.488997718285167,0.005,0.01,0.035,0.07
+"Rauvolfioideae",4,0.202521087933154,0.04,0.048,0.403,0.403
+"Moraceae",17,0.135334397423829,0,0,0.324,0.3888

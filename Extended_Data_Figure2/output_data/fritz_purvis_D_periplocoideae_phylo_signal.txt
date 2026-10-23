@@ -1,0 +1,16 @@
+Periplocoideae host use 
+
+
+Calculation of D statistic for the phylogenetic structure of a binary variable
+
+  Data :  data
+  Binary variable :  trait
+  Counts of states:  0 = 49
+                     1 = 7
+  Phylogeny :  phy
+  Number of permutations :  1000
+
+Estimated D :  1.026286
+Probability of E(D) resulting from no (random) phylogenetic structure :  0.526
+Probability of E(D) resulting from Brownian phylogenetic structure    :  0.002
+

@@ -1,0 +1,14 @@
+
+Calculation of D statistic for the phylogenetic structure of a binary variable
+
+  Data :  data
+  Binary variable :  milkweed
+  Counts of states:  0 = 23
+                     1 = 33
+  Phylogeny :  phy
+  Number of permutations :  1000
+
+Estimated D :  0.2406988
+Probability of E(D) resulting from no (random) phylogenetic structure :  0
+Probability of E(D) resulting from Brownian phylogenetic structure    :  0.201
+

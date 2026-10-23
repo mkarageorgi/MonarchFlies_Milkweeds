@@ -1,0 +1,16 @@
+Apocynoideae host use 
+
+
+Calculation of D statistic for the phylogenetic structure of a binary variable
+
+  Data :  data
+  Binary variable :  trait
+  Counts of states:  0 = 39
+                     1 = 17
+  Phylogeny :  phy
+  Number of permutations :  1000
+
+Estimated D :  0.4889977
+Probability of E(D) resulting from no (random) phylogenetic structure :  0.005
+Probability of E(D) resulting from Brownian phylogenetic structure    :  0.035
+
