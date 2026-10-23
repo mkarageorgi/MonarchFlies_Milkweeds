@@ -1,0 +1,146 @@
+---
+title: "Extended Data Fig 1 (4/6): Build the Apocynaceae + Moraceae plant tree"
+author: "Marianna Karageorgi"
+date: "2026-10-22"
+output: html_document
+---
+
+# 1. Overview
+
+Extended Data Fig 1 presents host use across Danaini as a butterfly species by
+plant genus matrix, aligned to a butterfly phylogeny on one axis and a plant
+phylogeny on the other. The butterfly phylogeny is built first, in notebooks 1–3
+(Danaini tree generation); the figure itself is assembled in notebooks 4–6:
+
+4. **`4_build_plant_tree.Rmd`** (this notebook) assembles the genus-level
+   Apocynaceae and Moraceae phylogeny that orders the matrix columns.
+5. `5_build_host_matrix.Rmd` derives the butterfly species by plant genus
+   presence/absence matrix from the HOSTS host-record dataset.
+6. `6_plot_host_matrix_figure.Rmd` assembles the final figure.
+
+This notebook records the provenance of the plant phylogeny and need only be
+re-run when its source trees change; notebooks 5 and 6 read its output,
+`input_data/host_matrix/Apo_Mora_phylo_tree/apocynaceae_moraceae_genus_tree.newick`.
+
+The plant phylogeny is assembled from two published sources. The Apocynaceae
+backbone is taken from the time-calibrated phylogeny of
+[Fishbein et al. (2018)](https://www.frontiersin.org/journals/ecology-and-evolution/articles/10.3389/fevo.2021.719741/full),
+reduced to one representative tip per genus, and the Moraceae lineages from a
+genus-level chronogram obtained from [TimeTree](https://timetree.org/).
+Apocynaceae and Moraceae are not sister families; the two genus-level trees are
+therefore joined onto a two-lineage backbone solely to place the families
+side by side as the two blocks of host plants used by Danaini. The deep
+divergence implied by the backbone is not meaningful and is not interpreted.
+
+```{r setup, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+library(ape)
+library(ggtree)
+
+tree_dir <- "../input_data/host_matrix/Apo_Mora_phylo_tree"
+```
+
+# 2. Apocynaceae: reduce the species tree to one tip per genus
+
+The Fishbein et al. (2018) phylogeny samples approximately 1,041 species. Because
+the figure resolves host use at the genus level, the tree is reduced to a single
+representative tip per genus following the standard phytools procedure
+(<https://blog.phytools.org/2014/11/pruning-trees-to-one-member-per-genus.html>):
+the genus is parsed from each tip label, the first tip encountered for each genus
+is retained, the remaining tips are dropped, and the surviving tips are relabelled
+with their genus name.
+
+```{r apocynaceae-genus}
+apoc_species <- read.tree(
+  file.path(tree_dir, "1041_Fishbein et al. 2018[outgroups_removed].newick")
+)
+
+# Genus = text before the first underscore in each "Genus_species" tip label
+apoc_genus_of_tip <- sapply(strsplit(apoc_species$tip.label, "_"), `[`, 1)
+
+# First tip encountered for each genus
+genera            <- unique(apoc_genus_of_tip)
+representative_tip <- sapply(genera, function(g) which(apoc_genus_of_tip == g)[1])
+
+apoc_genus <- drop.tip(
+  apoc_species,
+  apoc_species$tip.label[-representative_tip]
+)
+apoc_genus$tip.label <- genera
+
+cat("Apocynaceae genera retained:", length(apoc_genus$tip.label), "\n")
+```
+
+# 3. Moraceae: genus-level tree and nomenclature
+
+The Moraceae component is a time-calibrated, genus-level tree of the family
+obtained from [TimeTree](https://timetree.org/), which synthesizes published
+molecular divergence-time estimates into a consensus chronogram; branch lengths
+are expressed in millions of years. Two versions are retained in
+`input_data/host_matrix/Apo_Mora_phylo_tree/`: the species-level tree as downloaded
+(`moraceae_species.nwk`) and the genus-level tree used here
+(`moraceae_genus.nwk`), which spans the ~37 currently recognized Moraceae genera.
+
+The Moraceae genera represented among Danaini host records are *Ficus*,
+*Streblus* and *Trophis*. Historical records employ several synonyms, which are
+reconciled to currently accepted genera following Plants of the World Online
+(POWO, <https://powo.science.kew.org/>): *Cephalotrophis* and *Malaisia* are
+treated as *Trophis* (both referring to *Trophis scandens*), and *Urostigma*,
+a subgenus of *Ficus*, is treated as *Ficus*. The genus *Trophis* is not
+monophyletic in the TimeTree source and is represented by two lineages
+(`Trophis-1`, `Trophis-2`); the lineage corresponding to *Trophis scandens*
+(`Trophis-1`) is retained and relabelled `Trophis`.
+
+```{r moraceae-genus}
+moraceae <- read.tree(file.path(tree_dir, "moraceae_genus.nwk"))
+
+moraceae$tip.label[moraceae$tip.label == "Trophis-1"] <- "Trophis"
+
+cat("Moraceae tips:", paste(sort(moraceae$tip.label), collapse = ", "), "\n")
+```
+
+# 4. Join Apocynaceae and Moraceae
+
+The two genus-level trees are bound onto a two-tip backbone and the placeholder
+tips removed, yielding a single tree in which all Apocynaceae genera form one
+block and all Moraceae genera form another.
+
+```{r graft}
+backbone <- read.tree(text = "(Apoc_placeholder:1,Mora_placeholder:1);")
+
+# Graft Apocynaceae
+grafted <- bind.tree(
+  backbone, apoc_genus,
+  where = which(backbone$tip.label == "Apoc_placeholder")
+)
+grafted <- drop.tip(grafted, "Apoc_placeholder")
+
+# Graft Moraceae (tip indices change after the first drop, so re-find the tip)
+grafted <- bind.tree(
+  grafted, moraceae,
+  where = which(grafted$tip.label == "Mora_placeholder")
+)
+plant_tree <- drop.tip(grafted, "Mora_placeholder")
+
+cat("Grafted plant tree tips:", length(plant_tree$tip.label), "\n")
+```
+
+```{r preview, fig.width=6, fig.height=10}
+ggtree(plant_tree, branch.length = "none", ladderize = FALSE) +
+  geom_tiplab(size = 1.8, offset = 0.2)
+```
+
+# 5. Write the tree
+
+The assembled genus-level tree is written to `input_data/host_matrix/Apo_Mora_phylo_tree/`
+for use by the downstream notebooks. (An equivalent tree produced by an earlier
+workflow was stored as `apocynacear_moraceae__genus_final_tree.newick`; the
+filename used here corrects that spelling. The two describe the same joined
+Apocynaceae and Moraceae genus-level tree.)
+
+```{r write}
+out_path <- file.path(tree_dir, "apocynaceae_moraceae_genus_tree.newick")
+write.tree(plant_tree, out_path)
+cat("Wrote:", out_path, "\n")
+```

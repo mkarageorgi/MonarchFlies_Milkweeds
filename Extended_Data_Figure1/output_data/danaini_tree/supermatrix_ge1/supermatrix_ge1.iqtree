@@ -1,0 +1,470 @@
+IQ-TREE 3.1.4 built Sep 29 2026
+
+Partition file name: partitions_codon.nex
+Input file name: supermatrix.fasta
+Type of analysis: ModelFinder + tree reconstruction + ultrafast bootstrap (1000 replicates)
+Random seed number: 12345
+
+REFERENCES
+----------
+
+To cite IQ-TREE 3 please use:
+
+Thomas K.F. Wong, Nhan Ly-Trong, Huaiyan Ren, Piyumal Demotte, Hector Banos,
+Andrew J. Roger, Edward Susko, Chris Bielow, Nicola De Maio, Nick Goldman,
+Matthew W. Hahn, Mario dos Reis, Le Sy Vinh, Gavin Huttley, Robert Lanfear, Bui Quang Minh (2026)
+IQ-TREE 3: Phylogenomic Inference Software using Complex Evolutionary Models.
+Molecular Biology and Evolution, msag117.
+https://doi.org/10.1093/molbev/msag117
+
+Since you used ModelFinder please also cite: 
+
+Subha Kalyaanamoorthy, Bui Quang Minh, Thomas KF Wong, Arndt von Haeseler,
+and Lars S Jermiin (2017) ModelFinder: Fast model selection for
+accurate phylogenetic estimates. Nature Methods, 14:587–589.
+https://doi.org/10.1038/nmeth.4285
+
+Since you used ultrafast bootstrap (UFBoot) please also cite: 
+
+Diep Thi Hoang, Olga Chernomor, Arndt von Haeseler, Bui Quang Minh,
+and Le Sy Vinh (2018) UFBoot2: Improving the ultrafast bootstrap
+approximation. Mol. Biol. Evol., 35:518–522.
+https://doi.org/10.1093/molbev/msx281
+
+Since you used partition models please also cite:
+
+Olga Chernomor, Arndt von Haeseler, and Bui Quang Minh (2016)
+Terrace aware data structure for phylogenomic inference from
+supermatrices. Syst. Biol., 65:997-1008.
+https://doi.org/10.1093/sysbio/syw037
+
+SEQUENCE ALIGNMENT
+------------------
+
+NOTE: Alignment sequence type is auto-detected. If in doubt, specify it via -st option.
+Input data: 76 taxa with 8 partitions and 10452 total sites (24.8481% missing data)
+
+  ID	Type	Seq	Site	Unique	Infor	Invar	Const	Name
+   1	DNA	72	222	90	50	155	155	COI_pos1
+   2	DNA	76	3618	323	81	3437	3437	COI_pos2+ArgKin_pos1+ArgKin_pos2+CAD_pos2+DDC_pos2+EF1a_pos2+GAPDH_pos2+IDH_pos2+MDH_pos2+RpS5_pos2+RpS2_pos2+wg_pos2+Atpa_pos2
+   3	DNA	72	222	201	170	24	24	COI_pos3
+   4	DNA	42	1455	904	716	410	410	ArgKin_pos3+EF1a_pos3+RpS5_pos3+Atpa_pos3
+   5	DNA	55	1604	316	137	1340	1340	CAD_pos1+DDC_pos1+IDH_pos1+MDH_pos1+RpS2_pos1+wg_pos1
+   6	DNA	35	1099	869	737	160	160	CAD_pos3+IDH_pos3+MDH_pos3
+   7	DNA	54	708	632	520	81	81	DDC_pos3+GAPDH_pos3+RpS2_pos3+wg_pos3
+   8	DNA	42	1524	138	47	1433	1433	EF1a_pos1+GAPDH_pos1+RpS5_pos1+Atpa_pos1
+
+Column meanings:
+  Unique: Number of unique site patterns
+  Infor:  Number of parsimony-informative sites
+  Invar:  Number of invariant sites
+  Const:  Number of constant sites (can be subset of invariant sites)
+
+ModelFinder
+-----------
+
+Best-fit model according to BIC: TIM2+F+I+R3:COI_pos1,TIM3+F+I+G4:COI_pos2+ArgKin_pos1+ArgKin_pos2+CAD_pos2+DDC_pos2+EF1a_pos2+GAPDH_pos2+IDH_pos2+MDH_pos2+RpS5_pos2+RpS2_pos2+wg_pos2+Atpa_pos2,TIM+F+G4:COI_pos3,GTR+F+G4:ArgKin_pos3+EF1a_pos3+RpS5_pos3+Atpa_pos3,GTR+F+G4:CAD_pos1+DDC_pos1+IDH_pos1+MDH_pos1+RpS2_pos1+wg_pos1,HKY+F+I+G4:CAD_pos3+IDH_pos3+MDH_pos3,TVM+F+G4:DDC_pos3+GAPDH_pos3+RpS2_pos3+wg_pos3,TIM+F+I:EF1a_pos1+GAPDH_pos1+RpS5_pos1+Atpa_pos1
+
+List of best-fit models per partition:
+
+  ID  Model                  LogL         AIC      w-AIC        AICc     w-AICc         BIC      w-BIC
+   1  TIM2+F+I+R3       -1563.730    3151.461 + 3.02e-314    3152.954 + 4.87e-217    3192.293 + 2.39e-314
+   2  TIM3+F+I+G4       -6940.886   13899.772 + 3.02e-314   13899.822 + 4.87e-217   13955.515 + 2.39e-314
+   3  TIM+F+G4          -5226.993   10469.986 + 3.02e-314   10470.662 + 4.87e-217   10497.207 + 2.39e-314
+   4  GTR+F+G4         -11808.737   23637.474 + 3.02e-314   23637.626 + 4.87e-217   23690.301 + 2.39e-314
+   5  GTR+F+G4          -4644.027    9308.053 + 3.02e-314    9308.192 + 4.87e-217    9361.856 + 2.39e-314
+   6  HKY+F+I+G4       -11486.681   22987.362 + 3.02e-314   22987.465 + 4.87e-217   23022.377 + 2.39e-314
+   7  TVM+F+G4          -8791.488   17600.976 + 3.02e-314   17601.234 + 4.87e-217   17642.038 + 2.39e-314
+   8  TIM+F+I           -2939.860    5895.721 + 3.02e-314    5895.816 + 4.87e-217    5938.354 + 2.39e-314
+
+AIC, w-AIC   : Akaike information criterion scores and weights.
+AICc, w-AICc : Corrected AIC scores and weights.
+BIC, w-BIC   : Bayesian information criterion scores and weights.
+
+Plus signs denote the 95% confidence sets.
+Minus signs denote significant exclusion.
+
+SUBSTITUTION PROCESS
+--------------------
+
+Edge-linked-proportional partition model with separate substitution models and separate rates across sites
+
+  ID  Model           Speed  Parameters
+   1  TIM2+F+I+R3    0.7897  TIM2{2.64584,11.3124,85.388}+F{0.308992,0.14898,0.255612,0.286416}+I{0.518284}+R3{0.236307,0.291972,0.231253,2.64336,0.0141558,22.5857}
+   2  TIM3+F+I+G4    0.0604  TIM3{1.7409,3.12644,1.72743}+F{0.274555,0.236815,0.17701,0.31162}+I{0.861132}+G4{0.668194}
+   3  TIM+F+G4       13.9888  TIM{37.3481,0.178142,13.399}+F{0.425574,0.0514146,0.00841837,0.514593}+G4{0.7436}
+   4  GTR+F+G4       1.6634  GTR{1.13437,8.00954,2.05371,0.875407,6.9057}+F{0.165313,0.375278,0.20389,0.25552}+G4{1.34987}
+   5  GTR+F+G4       0.1924  GTR{6.78992,3.08747,2.70036,0.749813,19.3125}+F{0.28,0.176418,0.352201,0.19138}+G4{0.199582}
+   6  HKY+F+I+G4     2.2641  HKY{5.8313}+F{0.302428,0.164363,0.145114,0.388095}+I{0.0514243}+G4{4.04706}
+   7  TVM+F+G4       2.2726  TVM{1.18994,6.46504,2.3006,0.786883}+F{0.225245,0.294061,0.203107,0.277587}+G4{3.0574}
+   8  TIM+F+I        0.0830  TIM{0.927218,0.270539,14.7964}+F{0.282011,0.191365,0.366083,0.160541}+I{0.861596}
+
+MAXIMUM LIKELIHOOD TREE
+-----------------------
+
+Log-likelihood of the tree: -53401.8029 (s.e. 672.7005)
+Unconstrained log-likelihood (without tree): -49588.9900
+Number of free parameters (#branches + #model parameters): 221
+Akaike information criterion (AIC) score: 107245.6059
+Corrected Akaike information criterion (AICc) score: 107255.1977
+Bayesian information criterion (BIC) score: 108848.8611
+
+Marginal log-likelihood of the tree: -60115.2123
+Marginal Akaike information criterion (mAIC) score: 120672.4245
+
+Total tree length (sum of branch lengths): 2.3128
+Sum of internal branch lengths: 1.0000 (43.2382% of tree length)
+
+WARNING: 2 near-zero internal branches (<0.0001) should be treated with caution
+         Such branches are denoted by '**' in the figure below
+
+NOTE: Tree is UNROOTED although outgroup taxon 'Amauris_damocles' is drawn at root
+Numbers in parentheses are  ultrafast bootstrap support (%)
+
++--Amauris_damocles
+|
+|  +--Amauris_echeria
++--| (56)
+|  |  +--Amauris_nossima
+|  +--| (100)
+|     +--Amauris_ochlea
+|
+|  +--Amauris_ellioti
++--| (99)
+   |     +--Amauris_niavius
+   |  +--| (100)
+   |  |  +--Amauris_tartarea
+   +--| (65)
+      |                            +--Anetia_briarea
+      |                         +--| (100)
+      |                         |  +--Anetia_pantheratus
+      |                      +--| (47)
+      |                      |  +--Anetia_thirza
+      |                   +--| (35)
+      |                   |  |  +--Anetia_cubana
+      |                   |  +--| (100)
+      |                   |     +--Anetia_jaegeri
+      |               +---| (100)
+      |               |   |  +--Lycorea_halia
+      |               |   +--| (100)
+      |               |      +--Lycorea_ilione
+      |           +---| (100)
+      |           |   |      +--------------------------------Heliconius_erato
+      |           |   |   +--| (85)
+      |           |   |   |  +----------Tellervo_zoilus
+      |           |   +---| (100)
+      |           |       +-------------Mechanitis_polymnia
+      |        +--| (84)
+      |        |  |                                 +--Euploea_alcathoe
+      |        |  |                              +--| (86)
+      |        |  |                              |  |  +**Euploea_core
+      |        |  |                              |  +**| (98)
+      |        |  |                              |     +**Euploea_crameri
+      |        |  |                           +--| (71)
+      |        |  |                           |  +--Euploea_lewinii
+      |        |  |                        +--| (35)
+      |        |  |                        |  |  +--Euploea_eyndhovii
+      |        |  |                        |  +--| (55)
+      |        |  |                        |     +--Euploea_midamus
+      |        |  |                     +--| (46)
+      |        |  |                     |  |  +--Euploea_corinna
+      |        |  |                     |  +--| (100)
+      |        |  |                     |     +**Euploea_swainson
+      |        |  |                  +**| (13)
+      |        |  |                  |  +--Euploea_tulliolus
+      |        |  |               +--| (22)
+      |        |  |               |  |     +**Euploea_algea
+      |        |  |               |  |  +--| (100)
+      |        |  |               |  |  |  +**Euploea_doubledayi
+      |        |  |               |  +--| (79)
+      |        |  |               |     |  +--Euploea_batesii
+      |        |  |               |     +--| (90)
+      |        |  |               |        +--Euploea_sylvester
+      |        |  |            +--| (15)
+      |        |  |            |  |  +--Euploea_mulciber
+      |        |  |            |  +--| (62)
+      |        |  |            |     +--Euploea_radamanthus
+      |        |  |         +--| (34)
+      |        |  |         |  |     +--Euploea_eunice
+      |        |  |         |  |  +--| (74)
+      |        |  |         |  |  |  +--Euploea_klugii
+      |        |  |         |  +--| (94)
+      |        |  |         |     +--Euploea_leucostictos
+      |        |  |      +--| (36)
+      |        |  |      |  |  +--Euploea_camaralzeman
+      |        |  |      |  +--| (100)
+      |        |  |      |     +--Euploea_phaenareta
+      |        |  |   +--| (100)
+      |        |  |   |  +--Euploea_wallacei
+      |        |  +---| (100)
+      |        |      |                 +--Idea_agamarschana
+      |        |      |              +--| (63)
+      |        |      |              |  +--Idea_stolli
+      |        |      |           +--| (80)
+      |        |      |           |  +--Idea_lynceus
+      |        |      |        +--| (100)
+      |        |      |        |  +--Idea_malabarica
+      |        |      |     +--| (27)
+      |        |      |     |  +--Idea_idea
+      |        |      |  +--| (32)
+      |        |      |  |  +--Idea_leuconoe
+      |        |      +--| (100)
+      |        |         +--Idea_hypermnestra
+      |   +----| (100)
+      |   |    |                   +--Danaus_affinis
+      |   |    |                +--| (96)
+      |   |    |                |  +--Danaus_melanippus
+      |   |    |             +--| (96)
+      |   |    |             |  +--Danaus_genutia
+      |   |    |          +--| (100)
+      |   |    |          |  +--Danaus_ismare
+      |   |    |       +--| (82)
+      |   |    |       |  |     +--Danaus_chrysippus
+      |   |    |       |  |  +--| (100)
+      |   |    |       |  |  |  +--Danaus_petilia
+      |   |    |       |  +--| (100)
+      |   |    |       |     +--Danaus_gilippus
+      |   |    |   +---| (100)
+      |   |    |   |   |     +--Danaus_cleophile
+      |   |    |   |   |  +--| (100)
+      |   |    |   |   |  |  |  +--Danaus_erippus
+      |   |    |   |   |  |  +--| (53)
+      |   |    |   |   |  |     +--Danaus_plexippus
+      |   |    |   |   +--| (98)
+      |   |    |   |      +--Danaus_eresimus
+      |   |    +---| (100)
+      |   |        |           +--Tirumala_hamata
+      |   |        |        +--| (66)
+      |   |        |        |  +--Tirumala_limniace
+      |   |        |     +--| (54)
+      |   |        |     |  +--Tirumala_petiverana
+      |   |        +-----| (100)
+      |   |              +--Tirumala_septentrionis
+      +---| (100)
+          |        +--Ideopsis_gaura
+          |     +--| (100)
+          |     |  +--Ideopsis_vitrea
+          |  +--| (100)
+          |  |  |  +--Ideopsis_juventa
+          |  |  +--| (100)
+          |  |     |  +--Ideopsis_similis
+          |  |     +--| (48)
+          |  |        +--Ideopsis_vulgaris
+          +--| (100)
+             |                 +--Parantica_aglea
+             |              +--| (62)
+             |              |  +--Parantica_agleoides
+             |           +--| (95)
+             |           |  +--Parantica_aspasia
+             |        +--| (55)
+             |        |  +---Parantica_kirbyi
+             |     +--| (99)
+             |     |  +--Parantica_vitrina
+             |  +--| (76)
+             |  |  |           +--Parantica_luzonensis
+             |  |  |        +--| (80)
+             |  |  |        |  +--Parantica_sita
+             |  |  |     +--| (44)
+             |  |  |     |  +--Parantica_melaneus
+             |  |  |  +--| (89)
+             |  |  |  |  +--Parantica_nilgiriensis
+             |  |  +--| (84)
+             |  |     +--Parantica_melusine
+             +--| (100)
+                +--Miriamica_weiskei
+
+Tree in newick format:
+
+(Amauris_damocles:0.0014007191,(Amauris_echeria:0.0037309324,(Amauris_nossima:0.0004137637,Amauris_ochlea:0.0002834539)100:0.0042241729)56:0.0025994500,(Amauris_ellioti:0.0241342119,((Amauris_niavius:0.0073887693,Amauris_tartarea:0.0209575056)100:0.0191393136,((((((((Anetia_briarea:0.0102521105,Anetia_pantheratus:0.0113674156)100:0.0257511565,Anetia_thirza:0.0368907261)47:0.0017047992,(Anetia_cubana:0.0048714532,Anetia_jaegeri:0.0031974567)100:0.0295225986)35:0.0009251507,(Lycorea_halia:0.0168755589,Lycorea_ilione:0.0210489765)100:0.0201922997)100:0.0478374086,((Heliconius_erato:0.3275966816,Tellervo_zoilus:0.1143495759)85:0.0331813389,Mechanitis_polymnia:0.1371212840)100:0.0482708556)100:0.0476502780,(((((((((((Euploea_alcathoe:0.0028560047,(Euploea_core:0.0000026474,Euploea_crameri:0.0000010017)98:0.0000029790)86:0.0026655307,Euploea_lewinii:0.0012649591)71:0.0066686003,(Euploea_eyndhovii:0.0095541436,Euploea_midamus:0.0071520944)55:0.0033808757)35:0.0041471841,(Euploea_corinna:0.0008970319,Euploea_swainson:0.0000020168)100:0.0104027551)46:0.0033835011,Euploea_tulliolus:0.0139289986)13:0.0000021062,((Euploea_algea:0.0000010017,Euploea_doubledayi:0.0000010017)100:0.0126066757,(Euploea_batesii:0.0064862426,Euploea_sylvester:0.0013051959)90:0.0029435432)79:0.0054810264)22:0.0034647794,(Euploea_mulciber:0.0140167620,Euploea_radamanthus:0.0154545209)62:0.0029646043)15:0.0011179699,((Euploea_eunice:0.0061360427,Euploea_klugii:0.0040851947)74:0.0038986482,Euploea_leucostictos:0.0080346388)94:0.0121810770)34:0.0015836478,(Euploea_camaralzeman:0.0023055871,Euploea_phaenareta:0.0046952298)100:0.0169302516)36:0.0026083810,Euploea_wallacei:0.0123041665)100:0.0169876309,((((((Idea_agamarschana:0.0018852859,Idea_stolli:0.0085840781)63:0.0021367544,Idea_lynceus:0.0059681083)80:0.0043782859,Idea_malabarica:0.0170784840)100:0.0216127028,Idea_idea:0.0124448618)27:0.0001433422,Idea_leuconoe:0.0054762185)32:0.0041313020,Idea_hypermnestra:0.0126694762)100:0.0260862016)100:0.0427451119)84:0.0108412371,((((((Danaus_affinis:0.0106191545,Danaus_melanippus:0.0057486349)96:0.0025665958,Danaus_genutia:0.0049112199)96:0.0049841512,Danaus_ismare:0.0149557824)100:0.0128153429,((Danaus_chrysippus:0.0132891170,Danaus_petilia:0.0087854452)100:0.0120195008,Danaus_gilippus:0.0187542052)100:0.0165664101)82:0.0042756105,((Danaus_cleophile:0.0096526758,(Danaus_erippus:0.0055966513,Danaus_plexippus:0.0054271599)53:0.0012627696)100:0.0179632523,Danaus_eresimus:0.0333583473)98:0.0085558053)100:0.0482359268,(((Tirumala_hamata:0.0062011780,Tirumala_limniace:0.0040193300)66:0.0013474174,Tirumala_petiverana:0.0103954175)54:0.0019040065,Tirumala_septentrionis:0.0041926546)100:0.0611320414)100:0.0474745419)100:0.0560246325,(((Ideopsis_gaura:0.0059648683,Ideopsis_vitrea:0.0050979816)100:0.0175302350,(Ideopsis_juventa:0.0125095160,(Ideopsis_similis:0.0055814530,Ideopsis_vulgaris:0.0052916125)48:0.0024704413)100:0.0386470126)100:0.0179834502,((((((Parantica_aglea:0.0177167255,Parantica_agleoides:0.0185183664)62:0.0057188429,Parantica_aspasia:0.0042823967)95:0.0053867243,Parantica_kirbyi:0.0394729865)55:0.0010150380,Parantica_vitrina:0.0129185595)99:0.0108252378,((((Parantica_luzonensis:0.0075186636,Parantica_sita:0.0070952712)80:0.0026894335,Parantica_melaneus:0.0158214196)44:0.0007221489,Parantica_nilgiriensis:0.0127222369)89:0.0037083539,Parantica_melusine:0.0381741734)84:0.0032911242)76:0.0029085983,Miriamica_weiskei:0.0191044850)100:0.0189677448)100:0.0142662297)100:0.0429811287)65:0.0053833513)99:0.0144964801);
+
+CONSENSUS TREE
+--------------
+
+Consensus tree is constructed from 1000 bootstrap trees
+Log-likelihood of consensus tree: -53403.608287
+Robinson-Foulds distance between ML tree and consensus tree: 12
+
+Branches with support >0.000000% are kept (extended consensus)
+Branch lengths are optimized by maximum likelihood on original alignment
+Numbers in parentheses are bootstrap supports (%)
+
++--Amauris_damocles
+|
+|  +--Amauris_echeria
++--| (56)
+|  |  +--Amauris_nossima
+|  +--| (100)
+|     +--Amauris_ochlea
+|
+|  +--Amauris_ellioti
++--| (99)
+   |     +--Amauris_niavius
+   |  +--| (100)
+   |  |  +--Amauris_tartarea
+   +--| (65)
+      |                            +--Anetia_briarea
+      |                         +--| (100)
+      |                         |  +--Anetia_pantheratus
+      |                      +--| (47)
+      |                      |  +--Anetia_thirza
+      |                   +--| (35)
+      |                   |  |  +--Anetia_cubana
+      |                   |  +--| (100)
+      |                   |     +--Anetia_jaegeri
+      |               +---| (100)
+      |               |   |  +--Lycorea_halia
+      |               |   +--| (100)
+      |               |      +--Lycorea_ilione
+      |           +---| (100)
+      |           |   |      +--------------------------------Heliconius_erato
+      |           |   |   +--| (85)
+      |           |   |   |  +----------Tellervo_zoilus
+      |           |   +---| (100)
+      |           |       +-------------Mechanitis_polymnia
+      |        +--| (84)
+      |        |  |                              +--Euploea_alcathoe
+      |        |  |                           +--| (86)
+      |        |  |                           |  |  +--Euploea_core
+      |        |  |                           |  +--| (98)
+      |        |  |                           |     +--Euploea_crameri
+      |        |  |                        +--| (71)
+      |        |  |                        |  +--Euploea_lewinii
+      |        |  |                     +--| (35)
+      |        |  |                     |  |  +--Euploea_eyndhovii
+      |        |  |                     |  +--| (55)
+      |        |  |                     |     +--Euploea_midamus
+      |        |  |                  +--| (46)
+      |        |  |                  |  |  +--Euploea_corinna
+      |        |  |                  |  +--| (100)
+      |        |  |                  |     +--Euploea_swainson
+      |        |  |               +--| (19)
+      |        |  |               |  |     +--Euploea_algea
+      |        |  |               |  |  +--| (100)
+      |        |  |               |  |  |  +--Euploea_doubledayi
+      |        |  |               |  +--| (79)
+      |        |  |               |     |  +--Euploea_batesii
+      |        |  |               |     +--| (90)
+      |        |  |               |        +--Euploea_sylvester
+      |        |  |            +--| (9)
+      |        |  |            |  |        +--Euploea_eunice
+      |        |  |            |  |     +--| (74)
+      |        |  |            |  |     |  +--Euploea_klugii
+      |        |  |            |  |  +--| (94)
+      |        |  |            |  |  |  +--Euploea_leucostictos
+      |        |  |            |  +--| (29)
+      |        |  |            |     +--Euploea_tulliolus
+      |        |  |         +--| (34)
+      |        |  |         |  |  +--Euploea_mulciber
+      |        |  |         |  +--| (62)
+      |        |  |         |     +--Euploea_radamanthus
+      |        |  |      +--| (36)
+      |        |  |      |  |  +--Euploea_camaralzeman
+      |        |  |      |  +--| (100)
+      |        |  |      |     +--Euploea_phaenareta
+      |        |  |   +--| (100)
+      |        |  |   |  +--Euploea_wallacei
+      |        |  +---| (100)
+      |        |      |           +--Idea_agamarschana
+      |        |      |        +--| (63)
+      |        |      |        |  +--Idea_stolli
+      |        |      |     +--| (80)
+      |        |      |     |  +--Idea_lynceus
+      |        |      |  +--| (100)
+      |        |      |  |  +--Idea_malabarica
+      |        |      +--| (100)
+      |        |         |  +--Idea_hypermnestra
+      |        |         +--| (38)
+      |        |            |  +--Idea_idea
+      |        |            +--| (35)
+      |        |               +--Idea_leuconoe
+      |   +----| (100)
+      |   |    |                   +--Danaus_affinis
+      |   |    |                +--| (96)
+      |   |    |                |  +--Danaus_melanippus
+      |   |    |             +--| (96)
+      |   |    |             |  +--Danaus_genutia
+      |   |    |          +--| (100)
+      |   |    |          |  +--Danaus_ismare
+      |   |    |       +--| (82)
+      |   |    |       |  |     +--Danaus_chrysippus
+      |   |    |       |  |  +--| (100)
+      |   |    |       |  |  |  +--Danaus_petilia
+      |   |    |       |  +--| (100)
+      |   |    |       |     +--Danaus_gilippus
+      |   |    |   +---| (100)
+      |   |    |   |   |     +--Danaus_cleophile
+      |   |    |   |   |  +--| (100)
+      |   |    |   |   |  |  |  +--Danaus_erippus
+      |   |    |   |   |  |  +--| (53)
+      |   |    |   |   |  |     +--Danaus_plexippus
+      |   |    |   |   +--| (98)
+      |   |    |   |      +--Danaus_eresimus
+      |   |    +---| (100)
+      |   |        |           +--Tirumala_hamata
+      |   |        |        +--| (66)
+      |   |        |        |  +--Tirumala_limniace
+      |   |        |     +--| (54)
+      |   |        |     |  +--Tirumala_petiverana
+      |   |        +-----| (100)
+      |   |              +--Tirumala_septentrionis
+      +---| (100)
+          |        +--Ideopsis_gaura
+          |     +--| (100)
+          |     |  +--Ideopsis_vitrea
+          |  +--| (100)
+          |  |  |  +--Ideopsis_juventa
+          |  |  +--| (100)
+          |  |     |  +--Ideopsis_similis
+          |  |     +--| (48)
+          |  |        +--Ideopsis_vulgaris
+          +--| (100)
+             |                 +--Parantica_aglea
+             |              +--| (62)
+             |              |  +--Parantica_agleoides
+             |           +--| (95)
+             |           |  +--Parantica_aspasia
+             |        +--| (55)
+             |        |  +---Parantica_kirbyi
+             |     +--| (99)
+             |     |  +--Parantica_vitrina
+             |  +--| (76)
+             |  |  |        +--Parantica_luzonensis
+             |  |  |     +--| (80)
+             |  |  |     |  +--Parantica_sita
+             |  |  |  +--| (89)
+             |  |  |  |  |  +--Parantica_melaneus
+             |  |  |  |  +--| (50)
+             |  |  |  |     +--Parantica_nilgiriensis
+             |  |  +--| (84)
+             |  |     +--Parantica_melusine
+             +--| (100)
+                +--Miriamica_weiskei
+
+
+Consensus tree in newick format: 
+
+(Amauris_damocles:0.0013924326,(Amauris_echeria:0.0037342230,(Amauris_nossima:0.0004124690,Amauris_ochlea:0.0002825397)100:0.0042180851)56:0.0026114105,(Amauris_ellioti:0.0241537389,((Amauris_niavius:0.0074238574,Amauris_tartarea:0.0209412317)100:0.0191079920,((((((((Anetia_briarea:0.0103272237,Anetia_pantheratus:0.0113083411)100:0.0257139571,Anetia_thirza:0.0368863467)47:0.0016305276,(Anetia_cubana:0.0048804385,Anetia_jaegeri:0.0031922585)100:0.0296000938)35:0.0010018666,(Lycorea_halia:0.0169025831,Lycorea_ilione:0.0210743922)100:0.0201388142)100:0.0478189607,((Heliconius_erato:0.3275693097,Tellervo_zoilus:0.1143615837)85:0.0331737956,Mechanitis_polymnia:0.1371213938)100:0.0482982018)100:0.0476599594,((((((((((Euploea_alcathoe:0.0028681288,(Euploea_core:0.0000023438,Euploea_crameri:0.0000024484)98:0.0000023438)86:0.0026043069,Euploea_lewinii:0.0012996172)71:0.0061675240,(Euploea_eyndhovii:0.0093892670,Euploea_midamus:0.0073477320)55:0.0035341505)35:0.0040078266,(Euploea_corinna:0.0008885383,Euploea_swainson:0.0000024339)100:0.0107940208)46:0.0033916757,((Euploea_algea:0.0000024484,Euploea_doubledayi:0.0000024484)100:0.0124809232,(Euploea_batesii:0.0065583367,Euploea_sylvester:0.0012715680)90:0.0030328103)79:0.0053310381)19:0.0034583571,(((Euploea_eunice:0.0060904483,Euploea_klugii:0.0041542281)74:0.0042686671,Euploea_leucostictos:0.0081530900)94:0.0104957387,Euploea_tulliolus:0.0129169478)29:0.0020362613)9:0.0017653767,(Euploea_mulciber:0.0143832505,Euploea_radamanthus:0.0156351355)62:0.0032285921)34:0.0019926799,(Euploea_camaralzeman:0.0023197366,Euploea_phaenareta:0.0046764414)100:0.0170456946)36:0.0020993944,Euploea_wallacei:0.0125398904)100:0.0172723987,((((Idea_agamarschana:0.0018875506,Idea_stolli:0.0085879773)63:0.0020171366,Idea_lynceus:0.0060969889)80:0.0046050902,Idea_malabarica:0.0168500599)100:0.0189370799,(Idea_hypermnestra:0.0163803621,(Idea_idea:0.0126175520,Idea_leuconoe:0.0053978435)35:0.0000883713)38:0.0031859886)100:0.0270969937)100:0.0428472172)84:0.0108363418,((((((Danaus_affinis:0.0106287607,Danaus_melanippus:0.0057540447)96:0.0025686242,Danaus_genutia:0.0049145483)96:0.0050076428,Danaus_ismare:0.0149458944)100:0.0128005530,((Danaus_chrysippus:0.0132964022,Danaus_petilia:0.0087861300)100:0.0120171894,Danaus_gilippus:0.0187575941)100:0.0165630995)82:0.0042738838,((Danaus_cleophile:0.0096499646,(Danaus_erippus:0.0056089057,Danaus_plexippus:0.0054236415)53:0.0012628679)100:0.0179681611,Danaus_eresimus:0.0333816856)98:0.0085571332)100:0.0482931425,(((Tirumala_hamata:0.0062085624,Tirumala_limniace:0.0040083168)66:0.0013730612,Tirumala_petiverana:0.0104003108)54:0.0018963077,Tirumala_septentrionis:0.0042019360)100:0.0610739046)100:0.0474692152)100:0.0560789250,(((Ideopsis_gaura:0.0059855929,Ideopsis_vitrea:0.0050746602)100:0.0175521810,(Ideopsis_juventa:0.0125071933,(Ideopsis_similis:0.0056079312,Ideopsis_vulgaris:0.0052701274)48:0.0025264720)100:0.0386232578)100:0.0179929095,((((((Parantica_aglea:0.0177939561,Parantica_agleoides:0.0185099047)62:0.0056632245,Parantica_aspasia:0.0042895782)95:0.0054233163,Parantica_kirbyi:0.0393903663)55:0.0010197412,Parantica_vitrina:0.0129163486)99:0.0107410994,(((Parantica_luzonensis:0.0075548430,Parantica_sita:0.0071582949)80:0.0028772432,(Parantica_melaneus:0.0158414581,Parantica_nilgiriensis:0.0117509849)50:0.0017496608)89:0.0038856191,Parantica_melusine:0.0381003891)84:0.0034732064)76:0.0029185711,Miriamica_weiskei:0.0191034258)100:0.0189760366)100:0.0142706164)100:0.0429918661)65:0.0053553562)99:0.0144795412);
+
+ALISIM COMMAND
+--------------
+To simulate an alignment of the same length as the original alignment, using the tree and model parameters estimated from this analysis, you can use the following command:
+
+--alisim simulated_MSA -t supermatrix_ge1.treefile -p supermatrix_ge1.best_model.nex
+
+To mimic the alignment used to produce this analysis, i.e. simulate an alignment of the same length as the original alignment, using the tree and model parameters estimated from this analysis *and* copying the same gap positions as the original alignment, you can use the following command:
+
+iqtree -s supermatrix.fasta --alisim mimicked_MSA
+
+To simulate any number of alignments in either of the two commandlines above, use the --num-alignments options, for example mimic 100 alignments you would use the command line:
+
+iqtree -s supermatrix.fasta --alisim mimicked_MSA --num-alignments 100
+
+For more information on using AliSim, please visit: www.iqtree.org/doc/AliSim
+
+TIME STAMP
+----------
+
+Date and time: Fri Oct 16 11:09:53 2026
+Total CPU time used: 625.233876 seconds (0h:10m:25s)
+Total wall-clock time used: 414.985106 seconds (0h:6m:54s)
+

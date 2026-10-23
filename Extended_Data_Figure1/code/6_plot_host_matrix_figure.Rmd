@@ -1,0 +1,302 @@
+---
+title: "Extended Data Fig 1 (6/6): Plot the host-use matrix figure"
+author: "Naama Weksler"
+date: "2026-10-22"
+output: html_document
+---
+
+# 1. Overview
+
+This is the sixth and last of six notebooks for Extended Data Fig 1 (see
+`4_build_plant_tree.Rmd` and `5_build_host_matrix.Rmd`). It assembles the figure
+from the prepared trees and tables and performs no further data processing.
+
+The figure comprises three aligned panels. On the left, the Danaini phylogeny
+(`Danaini_in_HOSTS.newick`) is drawn with an adjacent strip encoding each
+species' ATPα genotype. Along the top, the genus-level Apocynaceae and Moraceae
+phylogeny built in `4_build_plant_tree.Rmd` is shown with tip points marking
+genera known to contain cardenolides and with bars delimiting plant subfamilies
+and families. At the centre, a presence/absence heatmap records host use for each
+butterfly species by plant genus, with use of *Asclepias* highlighted. Rows are
+ordered by the Danaini phylogeny and columns by the plant phylogeny.
+
+```{r setup, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(ape)
+library(phytools)
+library(ggtree)
+library(ggnewscale)
+library(patchwork)
+
+in_dir  <- "../input_data/host_matrix"
+out_dir <- "../output_data/host_matrix"
+
+clean_name <- function(x) {
+  stringr::str_squish(stringr::str_replace_all(as.character(x), "_", " "))
+}
+
+# "Danaus plexippus" -> "D. plexippus" for tip labels
+abbr_tip <- function(x) {
+  x <- clean_name(x)
+  vapply(x, function(z) {
+    parts <- strsplit(z, " ")[[1]]
+    if (length(parts) >= 2 && nchar(parts[1]) > 0)
+      paste0(substr(parts[1], 1, 1), ". ", parts[2]) else z
+  }, character(1))
+}
+
+# Tip order, top to bottom, exactly as ggtree draws it (ladderize = FALSE)
+drawn_tip_order <- function(tree) {
+  d <- ggtree(tree, ladderize = FALSE)$data
+  d <- d[d$isTip, ]
+  clean_name(d$label[order(d$y)])
+}
+```
+
+# 2. Read prepared inputs
+
+```{r read-inputs}
+host_assoc <- read.csv(file.path(out_dir, "Ext_fig1_host_associations.csv"),
+                       stringsAsFactors = FALSE) %>%
+  mutate(butterfly_species = clean_name(butterfly_species),
+         plant_genus       = str_squish(plant_genus))
+
+plant_attr <- read.csv(file.path(out_dir, "Ext_fig1_plant_genus_attributes.csv"),
+                       stringsAsFactors = FALSE) %>%
+  mutate(plant_genus = str_squish(plant_genus))
+
+atpa <- read.csv(file.path(out_dir, "Ext_fig1_butterfly_atpa.csv"),
+                 stringsAsFactors = FALSE) %>%
+  mutate(butterfly_species = clean_name(butterfly_species))
+
+danaini_tree <- read.tree(file.path(in_dir, "Danaini_in_HOSTS.newick"))
+danaini_tree$tip.label <- clean_name(danaini_tree$tip.label)
+
+plant_tree_full <- read.tree(
+  file.path(in_dir, "Apo_Mora_phylo_tree/apocynaceae_moraceae_genus_tree.newick")
+)
+```
+
+The Danaini tree is rotated to the tip orientation used in the ancestral-state
+reconstruction figures (`Figure_2/code/Blanca_HOSTS_milkweed_asclepias_ASR.Rmd`),
+so that Extended Data Fig 1 and Figure 2 present species in the same vertical
+order. The reference order is taken from the species tree used there
+(`danaini_reference_order.newick`); rotation only reorders the display and leaves
+topology and branch lengths unchanged. Species absent from the reference (the
+outgroup *Heliconius erato*) retain their topological placement.
+
+```{r rotate-danaini}
+reference_tree <- read.tree(file.path(in_dir, "danaini_reference_order.newick"))
+reference_tree$tip.label <- clean_name(reference_tree$tip.label)
+
+reference_order <- {
+  d <- ggtree(reference_tree, ladderize = FALSE)$data
+  d <- d[d$isTip, ]
+  clean_name(d$label[order(d$y, decreasing = TRUE)])
+}
+
+# Place the outermost outgroup (Heliconius erato, absent from the reference) at
+# the base alongside the other outgroups rather than at the top.
+reference_order <- c(reference_order, "Heliconius erato")
+
+danaini_tree <- ape::rotateConstr(
+  danaini_tree,
+  rev(intersect(reference_order, danaini_tree$tip.label))
+)
+```
+
+# 3. Prune the plant tree to the genera in the matrix
+
+```{r prune-plant-tree}
+genera_in_matrix <- sort(unique(plant_attr$plant_genus))
+
+missing_from_tree <- setdiff(genera_in_matrix, plant_tree_full$tip.label)
+if (length(missing_from_tree) > 0) {
+  message("Plant genera in the matrix but absent from the tree (dropped): ",
+          paste(missing_from_tree, collapse = ", "))
+}
+
+plant_tree <- keep.tip(
+  plant_tree_full,
+  intersect(plant_tree_full$tip.label, genera_in_matrix)
+) %>%
+  ladderize()
+
+cat("Plant genera plotted:", length(plant_tree$tip.label), "\n")
+```
+
+# 4. Orders and the plotting grid
+
+Row order from the Danaini tree, column order from the plant tree. The full
+butterfly x genus grid is filled with 0 (absent) where there is no association.
+
+```{r grid}
+row_order <- drawn_tip_order(danaini_tree)                 # butterfly species
+col_order <- drawn_tip_order(plant_tree)                   # plant genera
+
+# Only genera that survived tree pruning can be columns
+col_order <- col_order[col_order %in% plant_tree$tip.label]
+
+df_tile <- tidyr::crossing(
+  butterfly_species = row_order,
+  plant_genus       = col_order
+) %>%
+  left_join(
+    host_assoc %>% select(butterfly_species, plant_genus, tile_state),
+    by = c("butterfly_species", "plant_genus")
+  ) %>%
+  mutate(
+    tile_state = replace_na(tile_state, "Absent"),
+    tile_state = factor(tile_state, levels = c("Absent", "Present", "Asclepias")),
+    butterfly_species = factor(butterfly_species, levels = row_order),
+    plant_genus       = factor(plant_genus,       levels = col_order)
+  )
+```
+
+# 5. Heatmap panel
+
+```{r heatmap}
+p_tile <- ggplot(df_tile,
+                 aes(x = plant_genus, y = butterfly_species, fill = tile_state)) +
+  geom_tile(color = "white", linewidth = 0.1) +
+  scale_fill_manual(
+    name   = "Host use",
+    values = c("Absent" = "white", "Present" = "black", "Asclepias" = "#885ca6"),
+    breaks = c("Absent", "Present", "Asclepias"),
+    labels = c("Absent", "Present", "Asclepias"),
+    drop   = FALSE
+  ) +
+  scale_x_discrete(drop = FALSE, limits = col_order, expand = c(0, 0)) +
+  scale_y_discrete(drop = FALSE, limits = row_order, expand = c(0, 0)) +
+  labs(x = NULL, y = NULL) +
+  theme_minimal(base_size = 10) +
+  theme(
+    panel.grid   = element_blank(),
+    axis.text    = element_blank(),
+    axis.ticks   = element_blank(),
+    plot.margin  = margin(5.5, 5.5, 5.5, 5.5)
+  )
+```
+
+# 6. Danaini tree panel (with ATPα strip)
+
+```{r danaini-tree}
+atpa_levels  <- c("VSH", "VSN", "LSN", "LAN", "QAN", "unknown")
+atpa_palette <- c("VSH" = "#ed1c2c", "VSN" = "#f36f21", "LSN" = "#fec12b",
+                  "LAN" = "#3a6a9e", "QAN" = "grey30", "unknown" = "grey80")
+
+# One-column matrix of ATPα state per tip, in tree-tip order (rownames = tips)
+dan_plot <- danaini_tree
+dan_plot$tip.label <- abbr_tip(dan_plot$tip.label)
+
+atpa_by_abbr <- atpa %>%
+  mutate(tip = abbr_tip(butterfly_species)) %>%
+  distinct(tip, atpa_state)
+
+atpa_mat <- tibble(tip = dan_plot$tip.label) %>%
+  left_join(atpa_by_abbr, by = "tip") %>%
+  mutate(atpa_state = factor(replace_na(atpa_state, "unknown"),
+                             levels = atpa_levels)) %>%
+  column_to_rownames("tip")
+
+p_base <- ggtree(dan_plot, branch.length = "none", ladderize = FALSE, size = 0.3)
+dan_xmax <- max(p_base$data$x, na.rm = TRUE)
+p_base <- p_base + xlim(0, dan_xmax * 1.45)
+
+p_dan_tree <- gheatmap(
+  p_base, atpa_mat, offset = 0.05, width = 0.025, colnames = FALSE, color = NA
+) +
+  geom_tiplab(size = 3, offset = 0.75, fontface = "italic") +
+  scale_fill_manual(
+    name   = expression("ATP" * alpha * " state"),
+    values = atpa_palette, breaks = atpa_levels, drop = FALSE
+  )
+```
+
+# 7. Plant tree panel (cardenolides + subfamily/family bars)
+
+The subfamily and family bars are derived from the drawn tip order rather than
+hard-coded: for each group the bar spans from its first to its last tip as the
+tree is drawn.
+
+```{r plant-tree}
+plant_order <- drawn_tip_order(plant_tree)
+
+# Annotation for tip points: cardenolide presence per genus
+anno_carden <- plant_attr %>%
+  filter(plant_genus %in% plant_tree$tip.label) %>%
+  transmute(label = plant_genus,
+            cardenolide_state = if_else(known_cardenolide == 1L,
+                                        "Present", "Absent"))
+
+# Helper: endpoints (first/last tip in drawn order) for a set of genera
+strip_ends <- function(genera) {
+  g <- plant_order[plant_order %in% genera]
+  if (length(g) == 0) return(NULL)
+  c(first = g[1], last = g[length(g)])
+}
+
+# Build the group -> genera map for the bars
+attr_lut <- plant_attr %>% filter(plant_genus %in% plant_tree$tip.label)
+groups <- list(
+  "Rauvolfioideae" = attr_lut$plant_genus[attr_lut$plant_subfamily %in% "Rauvolfioideae"],
+  "Apocynoideae"   = attr_lut$plant_genus[attr_lut$plant_subfamily %in% "Apocynoideae"],
+  "Periplocoideae" = attr_lut$plant_genus[attr_lut$plant_subfamily %in% "Periplocoideae"],
+  "Asclepiadoideae & Secamonoideae (milkweed lineages)" =
+    attr_lut$plant_genus[attr_lut$plant_subfamily %in%
+                           c("Asclepiadoideae", "Secamonoideae")],
+  "Apocynaceae"    = attr_lut$plant_genus[attr_lut$plant_family == "Apocynaceae"],
+  "Moraceae"       = attr_lut$plant_genus[attr_lut$plant_family == "Moraceae"]
+)
+# Offsets: family bars sit outside subfamily bars
+group_offset <- c(
+  "Rauvolfioideae" = 30, "Apocynoideae" = 30, "Periplocoideae" = 30,
+  "Asclepiadoideae & Secamonoideae (milkweed lineages)" = 30,
+  "Apocynaceae" = 23, "Moraceae" = 23
+)
+
+p_apoc_tree <- ggtree(plant_tree, branch.length = "none", ladderize = FALSE,
+                      size = 0.3) %<+% anno_carden +
+  geom_tippoint(aes(color = cardenolide_state), size = 1.5) +
+  geom_tiplab(size = 3, angle = 90, hjust = 1, offset = -3, fontface = "italic") +
+  scale_color_manual(name = "Cardenolides",
+                     values = c("Absent" = "grey80", "Present" = "black")) +
+  xlim_tree(1) +
+  coord_flip(clip = "off")
+
+for (grp in names(groups)) {
+  ends <- strip_ends(groups[[grp]])
+  if (is.null(ends)) next
+  p_apoc_tree <- p_apoc_tree +
+    geom_strip(ends[["first"]], ends[["last"]], label = grp,
+               fontsize = 3, barsize = 0.3, color = "black",
+               offset = group_offset[[grp]], offset.text = 3, hjust = 0.5)
+}
+
+p_apoc_tree <- p_apoc_tree +
+  scale_x_reverse() +
+  theme(axis.text = element_blank(), axis.ticks = element_blank(),
+        plot.margin = margin(5.5, 5, 5, 5.5))
+```
+
+# 8. Combine and save
+
+```{r combine, fig.width=12, fig.height=10}
+fig_final <- plot_spacer() + p_apoc_tree + p_dan_tree + p_tile +
+  plot_layout(ncol = 2, widths = c(1, 2), heights = c(1, 2.2),
+              guides = "collect") &
+  theme(
+    legend.position   = "right",
+    legend.title      = element_text(size = 9),
+    legend.text       = element_text(size = 8),
+    legend.key.height = unit(0.4, "cm"),
+    legend.key.width  = unit(0.4, "cm")
+  )
+
+fig_final
+
+ggsave("../visuals/host_matrix/Ext_Fig1_butterfly_x_plant.pdf", fig_final,
+       width = 12, height = 10)
+```

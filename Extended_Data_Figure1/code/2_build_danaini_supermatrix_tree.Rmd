@@ -1,0 +1,261 @@
+---
+title: "Danaini phylogeny (2/6): building the multi-locus (≥1 locus) supermatrix tree"
+author: "Naama Weksler & Marianna Karageorgi"
+date: "2026-10-16"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = TRUE, warning = FALSE, dpi = 150)
+```
+
+# Purpose
+
+This notebook builds the Danaini (butterfly) species tree from the sequence data retrieved in
+**Step 1** (`1_pull_ncbi_data.Rmd`). It reads only from `input_data/` — no network access — and
+produces the **multi-locus supermatrix tree**: every Danaini species with **at least one** of the 12
+loci, plus three outgroup species, concatenated into a partitioned supermatrix and inferred by
+maximum likelihood.
+
+The full approach:
+
+1. select species from the occupancy matrix (≥1 locus, plus outgroups);
+2. **codon-aware alignment** of each locus (best reading frame → translate → MAFFT on amino acids →
+   back-translate);
+3. **automated QC/trim** of each alignment (dense codon-column core; drop sequences with excess
+   gaps, internal stops, or consensus-outlier distances; one sequence per species);
+4. **concatenate** into a supermatrix with **codon-position partitions**;
+5. infer the ML tree with **IQ-TREE** (run as a documented manual step — see §6);
+6. **root** on *Heliconius erato*, then export the tree and its branch-support values.
+
+All QC is automated and every dropped sequence and the reason for it is logged to `output_data/curation/`.
+
+# 0. Setup
+
+## 0.1 Libraries and helpers
+
+The functions below are sourced from the shared `helpers/` folder.
+
+```{r libs}
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(Biostrings)
+  library(ape)
+  library(ggtree)
+})
+
+# Helpers are sourced by RELATIVE path: the working directory must be the code/
+# folder. Chunk-by-chunk in VS Code uses the workspace root as wd, not the .Rmd
+# folder — so check and fail loudly if it's wrong.
+if (!file.exists("helpers/sequence_utils.R")) {
+  stop("Can't find helpers/ — set the working directory to code/ first.\n",
+       "  Current getwd(): ", getwd(), "\n",
+       '  Run: setwd("<path>/Extended_Data_Figure1/code")  (or restart the R terminal there)')
+}
+source("helpers/sequence_utils.R")    # get_accession, standardize_taxon, ...
+source("helpers/codon_alignment.R")   # codon_align()  (Marianna, refactored by Naama)
+source("helpers/alignment_qc.R")      # auto_trim_and_qc(), process_locus()  (Naama)
+source("helpers/supermatrix_tree.R")  # concat_loci, partitions, root_and_plot, export_tree
+```
+
+## 0.2 Configuration
+
+```{r config}
+# Paths are relative to the code/ folder (the working directory). Reads come from
+# input_data/danaini_tree/; generated artifacts go to output_data/danaini_tree/,
+# figures to visuals/danaini_tree/.
+INPUT_ROOT <- Sys.getenv("DANAINI_INPUT", unset = "../input_data/danaini_tree")
+OUT_ROOT   <- Sys.getenv("DANAINI_OUT",   unset = "../output_data/danaini_tree")
+FIG_ROOT   <- Sys.getenv("DANAINI_FIG",   unset = "../visuals/danaini_tree")
+
+INGROUP_DIR  <- file.path(INPUT_ROOT, "ncbi_loci")        # read: Danaini sequences
+OUTGROUP_DIR <- file.path(INPUT_ROOT, "ncbi_outgroups")   # read: outgroup sequences
+CURATION_DIR <- file.path(OUT_ROOT, "curation")           # write: per-locus QC logs
+TREE_DIR     <- file.path(OUT_ROOT, "supermatrix_ge1")    # write: supermatrix + tree
+for (d in c(CURATION_DIR, TREE_DIR, FIG_ROOT)) dir.create(d, recursive = TRUE, showWarnings = FALSE)
+
+# External tools — installed in a dedicated conda env (project preference; not Homebrew).
+CONDA_BIN <- "/opt/anaconda3/envs/danaini-phylo/bin"
+pick_bin <- function(cands) {
+  for (b in cands) {
+    p <- file.path(CONDA_BIN, b); if (file.exists(p)) return(p)
+    w <- Sys.which(b);            if (nzchar(w)) return(unname(w))
+  }
+  ""
+}
+MAFFT_BIN  <- pick_bin("mafft")                       # needed by this notebook (alignment)
+IQTREE_BIN <- pick_bin(c("iqtree3", "iqtree2", "iqtree"))  # referenced only by the manual §6 step
+stopifnot(nzchar(MAFFT_BIN))
+message("MAFFT : ", MAFFT_BIN)
+message("IQTREE: ", if (nzchar(IQTREE_BIN)) IQTREE_BIN else "(not found — run §6 manually)")
+
+# Loci, genetic codes, outgroups, thresholds.
+LOCI  <- c("COI","ArgKin","CAD","DDC","EF1a","GAPDH","IDH","MDH","RpS5","RpS2","wg","Atpa")
+CODE5 <- Biostrings::getGeneticCode("5")             # invertebrate mitochondrial (COI)
+GCODE_OF <- function(locus) if (locus == "COI") CODE5 else Biostrings::GENETIC_CODE
+
+OUTGROUPS_RAW <- c("Tellervo zoilus", "Mechanitis polymnia", "Heliconius erato")
+OUTGROUPS_STD <- gsub(" ", "_", OUTGROUPS_RAW)
+ROOT_TAXON    <- "Heliconius_erato"                  # most distant outgroup species
+
+OCC_THRESHOLD <- 0.5     # min codon-column occupancy to keep in the trim core
+MAX_BAD       <- 0.20    # max gap/ambiguity fraction per sequence
+MAD_K         <- 4       # consensus-distance outlier cutoff (median + k*MAD)
+MIN_LOCI      <- 1L      # multi-locus tree: keep species with >= 1 locus (supermatrix_ge1)
+SEED          <- 12345
+```
+
+# 1. Species selection
+
+Read the occupancy matrix from `input_data/` and keep ingroup species with at least `MIN_LOCI` loci,
+plus the three outgroup species (needed for rooting).
+
+```{r select-species}
+occ <- read_csv(file.path(INPUT_ROOT, "occupancy_matrix.csv"), show_col_types = FALSE)
+keep_raw <- occ %>%
+  filter(n_loci >= MIN_LOCI | butterfly_species %in% OUTGROUPS_RAW) %>%
+  pull(butterfly_species)
+keep_std <- union(gsub(" ", "_", keep_raw), OUTGROUPS_STD)
+cat("Species requested (>=", MIN_LOCI, "locus/loci + outgroups):", length(keep_std), "\n")
+```
+
+# 2. Per-locus codon alignment + automated QC
+
+The chunk below runs the entire align → QC → select chain for every locus: each
+`process_locus()` call (in `helpers/alignment_qc.R`, delegating to `auto_trim_and_qc()`) returns a
+single sequence per species for that locus. Because Step 1 kept up to 3 candidate accessions per
+species×locus, this is also where **the one accession that will represent each species is chosen**.
+For each locus:
+
+1. **Gather candidates** — `read_combined_locus()` loads all retrieved ingroup + outgroup
+   sequences; a species may enter with several candidate accessions.
+2. **Align them jointly** — `codon_align()` codon-aligns every candidate together (best reading
+   frame → translate → MAFFT on amino acids → back-translate). Nothing is dropped yet.
+3. **Trim to the dense core** — keep only codon columns present in ≥ `OCC_THRESHOLD` (0.5) of
+   sequences, which strips sparse insertions and mRNA-only tails while preserving reading frame.
+4. **Flag bad sequences** — a candidate is dropped if its gap/ambiguity fraction over the core
+   exceeds `MAX_BAD` (0.20), it has more than one internal stop codon, or it is a consensus
+   distance-outlier (> median + `MAD_K`·MAD, `MAD_K` = 4). **Outgroup species are protected** and
+   never dropped (legitimately divergent, and needed to root the tree).
+5. **Choose one accession per species** — among a species' surviving candidates, pick the one with
+   the **lowest gap fraction** over the trimmed core, breaking ties by **most non-gap bases**
+   (longest). That accession is marked `selected = TRUE` and becomes the species' row in the
+   alignment (and later its entry in `chosen_accessions.csv` / the reference matrix).
+
+Every candidate and the reason it was kept or dropped is recorded per locus in
+`output_data/curation/<locus>_qc_log.csv`, so the choices are fully auditable.
+
+```{r align-qc}
+aln_list <- setNames(lapply(LOCI, function(lc) process_locus(lc, keep_std = keep_std)), LOCI)
+```
+
+# 3. Concatenate into a partitioned supermatrix
+
+```{r concat}
+cc <- concat_loci(aln_list)
+writeXStringSet(cc$super, file.path(TREE_DIR, "supermatrix.fasta"))
+write_csv(cc$partitions, file.path(TREE_DIR, "partitions.csv"))
+write_codon_partitions(cc$partitions, file.path(TREE_DIR, "partitions_codon.nex"))
+cat("Supermatrix:", length(cc$super), "species x", unique(width(cc$super)), "bp\n")
+```
+
+# 4. Record the chosen accessions
+
+The single accession chosen per species×locus (the sequences that actually entered the supermatrix),
+aggregated from the per-locus QC logs just written. This is saved two ways: a tidy long table
+(`chosen_accessions.csv`) and the **species×gene reference matrix** (`accession_reference_matrix.csv`)
+— a wide, non-tidy table with **species on the rows (y)** and **genes on the columns (x)**, each cell
+holding the one chosen accession (blank where the species contributed no sequence for that gene).
+
+```{r chosen}
+chosen <- map_dfr(LOCI, function(lc) {
+  f <- file.path(CURATION_DIR, paste0(lc, "_qc_log.csv"))
+  if (!file.exists(f)) return(NULL)
+  read_csv(f, show_col_types = FALSE) %>% filter(selected) %>%
+    transmute(species, locus, accession)
+}) %>% filter(species %in% names(cc$super)) %>% arrange(species, locus)
+
+write_csv(chosen, file.path(TREE_DIR, "chosen_accessions.csv"))
+cat("Wrote chosen_accessions.csv:", nrow(chosen), "species x locus sequences\n")
+
+# Reference matrix: species (rows) x genes (columns), cells = the chosen accession.
+accession_matrix <- chosen %>%
+  pivot_wider(names_from = locus, values_from = accession) %>%
+  select(species, any_of(LOCI)) %>%          # genes on the x axis, in canonical order
+  arrange(species)
+write_csv(accession_matrix, file.path(OUT_ROOT, "accession_reference_matrix.csv"))
+cat("Reference matrix:", nrow(accession_matrix), "species x",
+    ncol(accession_matrix) - 1, "genes\n")
+```
+
+# 5. Build the ML tree with IQ-TREE (run manually)
+
+The maximum-likelihood search is **not run from R** — it is the one heavy, long-running step, so we
+keep it explicit and reproducible as a shell command you run yourself in the conda env. The chunk
+below is **not evaluated** (`eval=FALSE`); copy it into a terminal.
+
+```{bash iqtree, eval=FALSE}
+# Activate the dedicated conda env that holds IQ-TREE 3 (and MAFFT).
+conda activate danaini-phylo        # or: /opt/anaconda3/envs/danaini-phylo/bin on PATH
+
+# From the code/ folder; the supermatrix lives under the shared output_data/ tree.
+cd ../output_data/danaini_tree/supermatrix_ge1
+
+# ML tree with ModelFinderPlus + partition merging, 1000 ultrafast-bootstrap replicates
+# (--bnni reduces UFBoot overestimation). -p applies the codon-position partition scheme.
+iqtree3 \
+  -s supermatrix.fasta \
+  -p partitions_codon.nex \
+  -m MFP+MERGE \
+  -B 1000 --bnni \
+  -T AUTO \
+  -seed 12345 \
+  -pre supermatrix_ge1 \
+  -redo
+
+# Key outputs written next to the inputs:
+#   supermatrix_ge1.treefile   ML tree, internal-node labels = UFBoot support
+#   supermatrix_ge1.contree    majority-rule consensus tree
+#   supermatrix_ge1.iqtree     full report (models, partitions, likelihoods)
+#   supermatrix_ge1.log        run log
+```
+
+# 6. Root, export, and plot the tree
+
+Run this **after** IQ-TREE has produced `supermatrix_ge1.treefile`. The chunk is guarded by
+`file.exists()`, so the notebook still knits cleanly before the tree has been built. It roots on
+*Heliconius erato* and writes three things: the rooted tree in newick, a table of branch-support
+values, and a figure with the support values drawn at the internal nodes.
+
+```{r root-export-plot}
+treefile    <- file.path(TREE_DIR, "supermatrix_ge1.treefile")
+out_newick  <- file.path(TREE_DIR, "supermatrix_ge1_rooted.newick")
+out_support <- file.path(TREE_DIR, "branch_support.csv")
+out_pdf     <- file.path(FIG_ROOT, "supermatrix_ge1_tree.pdf")
+
+if (file.exists(treefile)) {
+  rt <- root_and_plot(treefile, out_pdf,
+                      title = "Danaini — ≥1-locus supermatrix (ML, UFBoot support)")
+  sup <- export_tree(rt, out_newick, out_support)
+  cat("Rooted tree tips:", length(rt$tip.label), "\n")
+  cat("Wrote:", out_newick, "|", out_support, "|", out_pdf, "\n")
+  cat("Branch-support summary:\n"); print(summary(sup$support))
+} else {
+  message("No treefile yet at ", treefile,
+          " — run the IQ-TREE command in §5, then re-knit to root/export/plot.")
+}
+```
+
+# Notes
+
+- **QC thresholds** (`OCC_THRESHOLD`, `MAX_BAD`, `MAD_K`) are the automated-QC knobs; the per-locus
+  `output_data/curation/*_qc_log.csv` files record every dropped sequence and why, so the thresholds
+  can be tuned if the logs show over- or under-aggressive filtering.
+- **Outgroups are protected** from the consensus-outlier filter (they are legitimately divergent);
+  if an outgroup is still absent from a gene it is because it had no sequence for that locus.
+- The **validation against Chazot et al. (2021)** and the project's own prior Danaini tree were
+  done in separate notebooks; they are not part of this multi-locus build.
+- Step 1 (`1_pull_ncbi_data.Rmd`) is the separate retrieval notebook that populates `input_data/`.

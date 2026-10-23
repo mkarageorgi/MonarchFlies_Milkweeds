@@ -1,0 +1,70 @@
+# species_to_keep.txt
+# One species per line (Genus_species, matching tree tip labels). Lines starting with # are
+# comments and are ignored. This is the set of tips retained from the >=1-locus supermatrix
+# tree (output_data/supermatrix_ge1/supermatrix_ge1.treefile) for downstream host-use work.
+#
+# Derivation (one-time, by N. Weksler):
+#   - Tellervo zoilus removed: its placement conflicts with Chazot et al. 2021 (see Step 3).
+#   - Ingroup species kept only if present in the curated HOSTS dataset
+#     (Figure_2/data/plant_butterfly_long_all.csv, column butterfly_species).
+#   - Outgroups kept if present in the general HOSTS dataset
+#     (Figure_2/data/resource.csv): Mechanitis polymnia, Heliconius erato.
+#   This list can be edited by hand; Step 3 simply prunes the tree to it.
+# n = 56 species (54 ingroup + 2 outgroup)
+
+Amauris_echeria
+Amauris_ellioti
+Amauris_niavius
+Amauris_ochlea
+Amauris_tartarea
+Anetia_briarea
+Anetia_thirza
+Danaus_affinis
+Danaus_chrysippus
+Danaus_cleophile
+Danaus_eresimus
+Danaus_erippus
+Danaus_genutia
+Danaus_gilippus
+Danaus_melanippus
+Danaus_plexippus
+Euploea_alcathoe
+Euploea_algea
+Euploea_batesii
+Euploea_camaralzeman
+Euploea_core
+Euploea_crameri
+Euploea_eunice
+Euploea_klugii
+Euploea_leucostictos
+Euploea_lewinii
+Euploea_midamus
+Euploea_mulciber
+Euploea_phaenareta
+Euploea_radamanthus
+Euploea_sylvester
+Euploea_tulliolus
+Euploea_wallacei
+Idea_hypermnestra
+Idea_leuconoe
+Idea_lynceus
+Idea_malabarica
+Idea_stolli
+Ideopsis_gaura
+Ideopsis_juventa
+Ideopsis_similis
+Ideopsis_vulgaris
+Lycorea_ilione
+Parantica_aglea
+Parantica_agleoides
+Parantica_aspasia
+Parantica_luzonensis
+Parantica_melaneus
+Parantica_sita
+Parantica_vitrina
+Tirumala_hamata
+Tirumala_limniace
+Tirumala_petiverana
+Tirumala_septentrionis
+Mechanitis_polymnia
+Heliconius_erato

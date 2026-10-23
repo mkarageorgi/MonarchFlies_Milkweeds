@@ -1,0 +1,258 @@
+---
+title: "Danaini phylogeny (1/6): pull NCBI sequence data and build the reference matrix"
+author: "Naama Weksler & Marianna Karageorgi"
+date: "2026-10-16"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = TRUE, warning = FALSE, dpi = 150)
+```
+
+# Purpose
+
+This is the **data-retrieval step** of the Danaini (butterfly) phylogeny workflow. It pulls all 12
+target loci for every Danaini species plus three outgroup species from NCBI, and lays the data out
+on disk so that **Step 2** (`2_build_danaini_supermatrix_tree.Rmd`) can build the tree without ever
+touching the network.
+
+Two kinds of thing are written:
+
+- The **handoff** that Step 2 consumes — the trimmed per-locus FASTAs and an occupancy matrix — goes
+  into `input_data/`. These are *inputs* to the tree build, hence the folder name.
+- The **generated summaries** — a reference matrix of accession numbers and the retrieval-error
+  log — go into `output_data/`, and the occupancy figure into `figures/`, following this project's
+  convention that analysis-generated artifacts live under `output_data/`.
+
+This step is **retrieval only**: no alignment, trimming, or tree inference happens here.
+
+# 0. Setup
+
+## 0.1 Libraries, helpers, and the NCBI API key
+
+The retrieval functions are sourced from the shared `helpers/` folder. Their provenance: the
+retrieval core (`run_locus_pipeline`, `run_coi_pipeline`, `pick_*_ids`, `fetch_fasta_batch`) is
+**Marianna Karageorgi's**, originally in `retrieve_locus.R` / `retrieve_coi.R`; the retry +
+error-logging layer and the NCBI species-sampling functions were added by **N. Weksler** (see the
+header of `helpers/ncbi_retrieval.R`).
+
+The NCBI API key is read from the environment because this folder is a git
+repository. One-time setup: add `ENTREZ_KEY=<your key>` to `~/.Renviron` and restart R.
+
+```{r libs}
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(rentrez)
+  library(Biostrings)
+})
+
+# Helpers are sourced by RELATIVE path, so the working directory must be the code/
+# folder. Running chunk-by-chunk in VS Code sends code to a terminal whose wd is the
+# workspace root, NOT the .Rmd folder — so check and fail loudly if it's wrong.
+if (!file.exists("helpers/ncbi_retrieval.R")) {
+  stop("Can't find helpers/ — set the working directory to code/ first.\n",
+       "  Current getwd(): ", getwd(), "\n",
+       '  Run: setwd("<path>/Extended_Data_Figure1/code")  (or restart the R terminal there)')
+}
+source("helpers/ncbi_retrieval.R")
+
+readRenviron("~/.Renviron")
+entrez_key <- Sys.getenv("ENTREZ_KEY")
+if (nzchar(entrez_key)) {
+  rentrez::set_entrez_key(entrez_key)
+  message("ENTREZ_KEY registered (", nchar(entrez_key), " chars) — ~10 req/s allowed.")
+} else {
+  warning("No ENTREZ_KEY found in environment; NCBI will throttle to ~3 req/s.")
+}
+```
+
+## 0.2 Run configuration
+
+Paths and the 12-locus search table. The real pull always uses the full species set and all loci
+(§2–3); §1 first runs a tiny smoke test to catch a broken key or network cheaply, before the long
+full pull.
+
+```{r config}
+# Handoff (inputs to Step 2) vs generated summaries (outputs) vs figures.
+# Paths are relative to the code/ folder (the working directory); tree-generation
+# data is nested under the shared input_data/, output_data/, and visuals/ folders.
+INPUT_ROOT <- Sys.getenv("DANAINI_INPUT", unset = "../input_data/danaini_tree")
+OUT_ROOT   <- Sys.getenv("DANAINI_OUT",   unset = "../output_data/danaini_tree")
+FIG_ROOT   <- Sys.getenv("DANAINI_FIG",   unset = "../visuals/danaini_tree")
+for (d in c(INPUT_ROOT, OUT_ROOT, FIG_ROOT)) dir.create(d, recursive = TRUE, showWarnings = FALSE)
+
+INGROUP_DIR  <- file.path(INPUT_ROOT, "ncbi_loci")       # Danaini sequences
+OUTGROUP_DIR <- file.path(INPUT_ROOT, "ncbi_outgroups")  # outgroup sequences
+
+# 12 target loci. Keys are used verbatim for every directory/file name downstream.
+loci <- tribble(
+  ~locus,   ~term_fragment,              ~min_len, ~max_len, ~keep_n,
+  "COI",    'mitochondrion[filter] AND (COI[Gene] OR cox1[Gene] OR "cytochrome c oxidase subunit I"[Title] OR COX1[All Fields] OR CO1[All Fields])',  500,   30000,      3,
+  "ArgKin", '(ArgKin[Gene] OR "arginine kinase"[Title] OR ArgK[All Fields])',                                                          200,   30000,      3,
+  "CAD",    '(CAD[Gene] OR "carbamoylphosphate synthetase"[Title] OR rudimentary[Title] OR CAD[All Fields])',                          200,   30000,      3,
+  "DDC",    '(DDC[Gene] OR "dopa decarboxylase"[Title] OR DDC[All Fields])',                                                           200,   30000,      3,
+  "EF1a",   '(EF1a[Gene] OR "elongation factor-1 alpha"[Title] OR "elongation factor 1 alpha"[Title] OR EF-1alpha[All Fields])',      200,   30000,      3,
+  "GAPDH",  '(GAPDH[Gene] OR "glyceraldehyde-3-phosphate dehydrogenase"[Title] OR GAPDH[All Fields])',                                 200,   30000,      3,
+  "IDH",    '(IDH[Gene] OR "isocitrate dehydrogenase"[Title] OR IDH[All Fields])',                                                     200,   30000,      3,
+  "MDH",    '(MDH[Gene] OR "malate dehydrogenase"[Title] OR MDH[All Fields])',                                                         200,   30000,      3,
+  "RpS5",   '(Rps5[Gene] OR RpS5[All Fields] OR "ribosomal protein S5"[Title])',                                                       150,   30000,      3,
+  "RpS2",   '(Rps2[Gene] OR RpS2[All Fields] OR "ribosomal protein S2"[Title])',                                                       150,   30000,      3,
+  "wg",     '(wingless[Gene] OR wingless[Title] OR wg[All Fields])',                                                                    200,   30000,      3,
+  "Atpa",
+'((("Na+/K+"[Title] OR "Na+,K+"[Title] OR "Na K"[Title]) AND ATPase[Title] AND alpha[Title]) OR
+  ((sodium[Title] AND potassium[Title]) AND ATPase[Title] AND alpha[Title]) OR
+  atpa[Gene])',
+150, 30000, 3
+)
+
+# Three outgroup species; Heliconius erato is the intended root (most distant lineage).
+outgroups <- tibble::tibble(
+  butterfly_species = c("Tellervo zoilus", "Mechanitis polymnia", "Heliconius erato")
+)
+```
+
+# 1. Smoke test (runs first)
+
+Before the long full pull, validate the whole retrieval chain — API key, NCBI search, the pickers,
+and FASTA fetch — on a tiny hard-coded subset: three well-sequenced Danaini species and two loci
+(COI + EF1a), written to a throwaway temporary directory. This is cheap (a handful of requests) and
+catches the common failures (missing key, network/throttling, a broken query) in seconds.
+
+```{r smoke-test}
+smoke_species <- tibble(butterfly_species = c("Danaus plexippus",
+                                              "Danaus chrysippus",
+                                              "Tirumala limniace"))
+smoke_loci <- c("COI", "EF1a")
+smoke_dir  <- file.path(tempdir(), "danaini_smoke")
+
+smoke_ok <- vapply(smoke_loci, function(lc) {
+  row <- loci %>% filter(locus == lc)
+  if (lc == "COI") run_coi_pipeline(smoke_species, row, out_dir = smoke_dir)
+  else             run_locus_pipeline(smoke_species, row, out_dir = smoke_dir)
+  fa <- file.path(smoke_dir, lc, paste0(lc, "_all_trimmed.fasta"))
+  file.exists(fa) && length(readLines(fa)) > 0
+}, logical(1))
+
+print(setNames(smoke_ok, smoke_loci))
+```
+
+## 1.1 Checkpoint — stop here if the smoke test failed
+
+The full pull below is long and network-bound. If either locus above came back `FALSE`, the
+retrieval chain is broken — most often a missing `ENTREZ_KEY` or no network — and the full pull will
+fail the same way after a long wait. **Fix that before continuing.** This guard stops the notebook
+so a failed smoke test can't silently roll into the full run.
+
+```{r smoke-checkpoint}
+stopifnot(
+  "Smoke test failed — fix the NCBI key / network before the full pull." =
+    all(smoke_ok)
+)
+message("Smoke test passed — proceeding to the full pull.")
+```
+
+# 2. Species sampling (full set)
+
+`get_danaini_species()` resolves the Danaini tribe taxid and lists every species-rank descendant
+with an NCBI taxonomy record. The full set is always used here — there is no subsetting.
+
+```{r sampling}
+species <- get_danaini_species(retmax = 20000)
+stopifnot(is.data.frame(species), nrow(species) > 0)
+
+write_csv(species, file.path(OUT_ROOT, "danaini_species_taxonomy.csv"))
+cat("Danaini species with NCBI taxonomy records:", nrow(species), "\n")
+```
+
+# 3. Retrieve all loci (ingroup + outgroups)
+
+The long, network-bound step. Per locus it writes `*_accessions_raw.csv`,
+`*_accessions_trimmed.csv`, and `*_all_trimmed.fasta` under `input_data/`.
+
+```{r retrieve}
+run_one_locus <- function(sp_tbl, locus_name, out_dir) {
+  row <- loci %>% filter(locus == locus_name)
+  if (locus_name == "COI") run_coi_pipeline(sp_tbl, row, out_dir = out_dir)
+  else                     run_locus_pipeline(sp_tbl, row, out_dir = out_dir)
+}
+
+for (lc in loci$locus) { message("INGROUP — ", lc);  run_one_locus(species,   lc, INGROUP_DIR)  }
+for (lc in loci$locus) { message("OUTGROUP — ", lc);  run_one_locus(outgroups, lc, OUTGROUP_DIR) }
+```
+
+## 3.1 Retrieval error log
+
+If this table is non-empty, the corresponding species×locus zeros below are **unreliable** (a failed
+request, not a confirmed absence) and those calls should be re-run before trusting the audit.
+
+```{r error-log}
+retrieval_errors <- ncbi_error_log()
+write_csv(retrieval_errors, file.path(OUT_ROOT, "retrieval_errors.csv"))
+cat("NCBI calls that failed after retries:", nrow(retrieval_errors), "\n")
+if (nrow(retrieval_errors)) print(head(retrieval_errors, 20))
+```
+
+# 4. Occupancy matrix (handoff to Step 2)
+
+Presence = at least one kept accession in the per-locus trimmed table. Step 2 uses `n_loci` to pick
+which species enter the supermatrix, so this matrix is written to `input_data/`.
+
+The species×gene **reference matrix of accession numbers** is produced in **Step 2**, not here: it
+must contain only the single accession per species×gene that is actually chosen for the supermatrix
+after QC, and that choice is not known until Step 2 aligns and filters the sequences.
+
+```{r occupancy}
+read_trimmed <- function(locus_name, base_dir) {
+  f <- file.path(base_dir, locus_name, paste0(locus_name, "_accessions_trimmed.csv"))
+  if (!file.exists(f)) return(NULL)
+  read_csv(f, show_col_types = FALSE) %>%
+    transmute(butterfly_species, locus = locus_name, accessions)
+}
+
+accessions_long <- map_dfr(loci$locus, function(lc) {
+  bind_rows(read_trimmed(lc, INGROUP_DIR), read_trimmed(lc, OUTGROUP_DIR))
+}) %>%
+  mutate(accessions = na_if(accessions, "")) %>%
+  distinct(butterfly_species, locus, .keep_all = TRUE)
+
+occupancy_long <- accessions_long %>%
+  transmute(butterfly_species, locus, present = as.integer(!is.na(accessions)))
+
+occupancy_matrix <- occupancy_long %>%
+  pivot_wider(names_from = locus, values_from = present, values_fill = 0) %>%
+  mutate(n_loci = rowSums(across(all_of(intersect(loci$locus, names(.)))))) %>%
+  arrange(desc(n_loci))
+
+write_csv(occupancy_matrix, file.path(INPUT_ROOT, "occupancy_matrix.csv"))
+cat("Species in occupancy matrix:", nrow(occupancy_matrix),
+    "| locus columns:", length(intersect(loci$locus, names(occupancy_matrix))), "\n")
+```
+
+## 4.1 Occupancy audit figure
+
+```{r occupancy-fig}
+is_outgroup <- occupancy_matrix$butterfly_species %in% outgroups$butterfly_species
+ingroup_occ <- occupancy_matrix[!is_outgroup, ]
+
+cat("Ingroup species:", nrow(ingroup_occ), "\n")
+cat("Loci per species — summary:\n"); print(summary(ingroup_occ$n_loci))
+
+p_hist <- ggplot(ingroup_occ, aes(n_loci)) +
+  geom_bar(fill = "#2c7fb8") +
+  scale_x_continuous(breaks = 0:12, limits = c(-0.5, 12.5)) +
+  labs(x = "number of loci present (of 12)", y = "number of species",
+       title = "Danaini locus occupancy per species (ingroup)") +
+  theme_minimal(base_size = 12)
+ggsave(file.path(FIG_ROOT, "occupancy_hist.png"), p_hist, width = 7, height = 4, dpi = 150)
+p_hist
+```
+
+# Handoff to Step 2
+
+`input_data/` now contains the per-locus FASTAs (`ncbi_loci/`, `ncbi_outgroups/`) and
+`occupancy_matrix.csv`. `2_build_danaini_supermatrix_tree.Rmd` reads only from `input_data/` and
+needs no network access. Step 2 writes the species×gene reference matrix of the chosen accessions
+(the ones that actually enter the supermatrix) to its `output_data/`.

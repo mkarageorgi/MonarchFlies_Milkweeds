@@ -1,0 +1,582 @@
+---
+title: "Extended Data Fig 1 (5/6): Build the host-use matrix from HOSTS"
+author: "Naama Weksler & Marianna Karageorgi"
+date: "2026-10-22"
+output: html_document
+---
+
+# 1. Overview
+
+This is the fifth of six notebooks for Extended Data Fig 1 (see
+`4_build_plant_tree.Rmd`). It converts the **HOSTS** host-record dataset into the
+butterfly species by plant genus associations shown in the figure and writes
+them, together with the per-genus and per-species annotations, to
+`../output_data/host_matrix/` for use by `6_plot_host_matrix_figure.Rmd`.
+
+The record cleaning and plant-taxonomy standardization follow the pipeline of
+`Figure_2/code/Blanca_HOSTS_milkweed_asclepias_ASR.Rmd`, ensuring that Extended
+Data Fig 1 and Figure 2 rest on the same curated set of associations. The
+procedure comprises the following steps:
+
+1. The HOSTS Danainae export is read, quality-filtered, and standardized to a
+   consistent plant taxonomy.
+2. Records are collapsed to butterfly species by plant genus associations, with
+   the number of supporting records (`n_records`) retained for each pair.
+3. The two outgroup species *Mechanitis polymnia* and *Heliconius erato* are
+   incorporated from `HOSTS_Mechanitis_Heliconius.csv` (which shares the HOSTS
+   schema). Neither feeds on Apocynaceae or Moraceae, so both appear as empty
+   rows in the figure.
+4. Two curation rules are applied. Under the **native-range rule**, an *Asclepias*
+   association is counted only where the butterfly's native range overlaps that
+   of *Asclepias* (`native_range_overlap == "yes"`). Under the **single-record
+   rule**, a single-record association that constitutes a butterfly's only
+   evidence for the milkweed clade, or its only evidence for *Asclepias*, is
+   retained only if it has been manually validated in
+   `HOSTS_single_record_milkweed_associations_BH.csv`; single-record milkweed
+   associations for butterflies with additional milkweed evidence are retained
+   without such validation.
+5. The associations are restricted to Apocynaceae and Moraceae, the plant
+   families shown in the figure, and the resulting associations and annotations
+   are written to disk.
+
+```{r setup, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(ape)
+
+in_dir  <- "../input_data/host_matrix"
+out_dir <- "../output_data/host_matrix"
+dir.create(out_dir, showWarnings = FALSE)
+
+# --- small helpers (from Blanca_HOSTS_milkweed_asclepias_ASR.Rmd) ---
+clean_name <- function(x) {
+  stringr::str_squish(stringr::str_replace_all(as.character(x), "_", " "))
+}
+blank_to_na <- function(x) {
+  x <- stringr::str_squish(as.character(x))
+  dplyr::na_if(x, "")
+}
+
+# Plant families shown in the figure
+FIGURE_PLANT_FAMILIES <- c("Apocynaceae", "Moraceae")
+# Milkweed-clade subfamilies (Asclepias belongs to Asclepiadoideae)
+MILKWEED_SUBFAMILIES  <- c("Asclepiadoideae", "Secamonoideae")
+```
+
+# 2. Read the HOSTS records
+
+Both the main Danainae export and the outgroup workbook share the HOSTS column
+schema, so a single function maps raw HOSTS columns to the tidy per-record
+schema used downstream.
+
+```{r hosts-schema}
+# Map a raw HOSTS-schema data frame (CSV or Excel sheet) to the tidy schema.
+hosts_schema <- function(raw) {
+  raw %>%
+    transmute(
+      butterfly_family     = blank_to_na(Family),
+      butterfly_subfamily  = blank_to_na(Subfamily),
+      butterfly_genus      = clean_name(Genus),
+      butterfly_epithet    = clean_name(Species),
+      butterfly_subspecies = blank_to_na(Subspecies),
+      plant_genus_original = clean_name(Plantgenus),
+      plant_species        = blank_to_na(Plantspecies),
+      plant_family_original = blank_to_na(`APG plantfamily`),
+      country              = blank_to_na(Country),
+      source               = blank_to_na(Source),
+      secondary_source     = blank_to_na(`Secondary source`),
+      date                 = blank_to_na(Date),
+      captive_flag         = blank_to_na(`Captive?`),
+      error_flag           = blank_to_na(`Error?`),
+      natural_host_flag    = blank_to_na(`Nathost?`)
+    ) %>%
+    mutate(
+      butterfly_species = str_squish(paste(butterfly_genus, butterfly_epithet))
+    )
+}
+
+# Quality filters used by the original HOSTS curation: drop records with missing
+# or uncertain butterfly names, missing plant genera, or captive/error/
+# non-natural-host flags.
+quality_filter <- function(df) {
+  df %>%
+    filter(
+      !is.na(butterfly_genus),
+      !is.na(butterfly_epithet),
+      !str_detect(butterfly_species, "\\?"),
+      !is.na(plant_genus_original),
+      !captive_flag %in% c("?", "Y"),
+      !error_flag %in% c("?", "O", "Y"),
+      !natural_host_flag %in% "N"
+    )
+}
+```
+
+```{r read-main-hosts}
+hosts_raw <- read.csv(
+  file.path(in_dir, "HOSTS_Danainae.csv"),
+  check.names = FALSE, stringsAsFactors = FALSE, na.strings = c("", "NA")
+)
+
+hosts <- hosts_schema(hosts_raw) %>%
+  mutate(record_id = paste0("hosts_", row_number()), .before = 1)
+
+hosts_filtered <- quality_filter(hosts)
+
+cat("Raw HOSTS records:        ", nrow(hosts), "\n")
+cat("After quality filters:    ", nrow(hosts_filtered), "\n")
+cat("Records removed:          ", nrow(hosts) - nrow(hosts_filtered), "\n")
+```
+
+# 3. Standardize plant genera and add taxonomy
+
+The POWO-based recoding and the plant taxonomy table are taken verbatim from
+`Blanca_HOSTS_milkweed_asclepias_ASR.Rmd` so the two figures resolve plant
+taxonomy identically. The original HOSTS genus is retained for traceability.
+
+```{r plant-taxonomy}
+powo_recode <- tribble(
+  ~plant_genus_original, ~plant_genus,
+  "Brachystelma", "Ceropegia",
+  "Dregea", "Stephanotis",
+  "Graphistemma", "Cynanchum",
+  "Gunnessia", "Sarcolobus",
+  "Holostemma", "Cynanchum",
+  "Ischnostemma", "Vincetoxicum",
+  "Leichardtia", "Leichhardtia",
+  "Metaplexis", "Cynanchum",
+  "Morrenia", "Araujia",
+  "Pentarrhinum", "Cynanchum",
+  "Pleurostelma", "Vincetoxicum",
+  "Raphistemma", "Cynanchum",
+  "Rhyncharrhena", "Vincetoxicum",
+  "Rhynchodia", "Chonemorpha",
+  "Sarcostemma", "Cynanchum",
+  "Tylophora", "Vincetoxicum"
+)
+
+plant_taxonomy <- tribble(
+  ~plant_family, ~plant_subfamily, ~plant_tribe, ~plant_subtribe, ~plant_genus,
+  "Moraceae", NA, NA, NA, "Ficus",
+  "Moraceae", NA, NA, NA, "Streblus",
+  "Moraceae", NA, NA, NA, "Trophis",
+  "Apocynaceae", "Rauvolfioideae", "Carisseae", NA, "Carissa",
+  "Apocynaceae", "Rauvolfioideae", "Melodineae", NA, "Melodinus",
+  "Apocynaceae", "Rauvolfioideae", "Plumerieae", "Allamandinae", "Allamanda",
+  "Apocynaceae", "Rauvolfioideae", "Plumerieae", "Plumeriinae", "Plumeria",
+  "Apocynaceae", "Rauvolfioideae", "Plumerieae", "Thevetiinae", "Cerbera",
+  "Apocynaceae", "Apocynoideae", "Apocyneae", "Apocyinae", "Apocynum",
+  "Apocynaceae", "Apocynoideae", "Apocyneae", "Beaumontiinae", "Vallaris",
+  "Apocynaceae", "Apocynoideae", "Apocyneae", "Chonemorphinae", "Chonemorpha",
+  "Apocynaceae", "Apocynoideae", "Apocyneae", "Chonemorphinae", "Trachelospermum",
+  "Apocynaceae", "Apocynoideae", "Echiteae", "Parsonsiinae", "Parsonsia",
+  "Apocynaceae", "Apocynoideae", "Malouetieae", "Malouetiinae", "Holarrhena",
+  "Apocynaceae", "Apocynoideae", "Mesechiteae", NA, "Mandevilla",
+  "Apocynaceae", "Apocynoideae", "Nerieae", "Alafiinae", "Strophanthus",
+  "Apocynaceae", "Apocynoideae", "Nerieae", "Neriinae", "Nerium",
+  "Apocynaceae", "Periplocoideae", NA, NA, "Cryptolepis",
+  "Apocynaceae", "Periplocoideae", NA, NA, "Cryptostegia",
+  "Apocynaceae", "Periplocoideae", NA, NA, "Gymnanthera",
+  "Apocynaceae", "Periplocoideae", NA, NA, "Hemidesmus",
+  "Apocynaceae", "Periplocoideae", NA, NA, "Myriopteron",
+  "Apocynaceae", "Periplocoideae", NA, NA, "Periploca",
+  "Apocynaceae", "Periplocoideae", NA, NA, "Streptocaulon",
+  "Apocynaceae", "Secamonoideae", NA, NA, "Secamone",
+  "Apocynaceae", "Secamonoideae", NA, NA, "Toxocarpus",
+  "Apocynaceae", "Asclepiadoideae", "Marsdenieae", NA, "Gongronema",
+  "Apocynaceae", "Asclepiadoideae", "Marsdenieae", NA, "Gymnema",
+  "Apocynaceae", "Asclepiadoideae", "Marsdenieae", NA, "Hoya",
+  "Apocynaceae", "Asclepiadoideae", "Marsdenieae", NA, "Jasminanthes",
+  "Apocynaceae", "Asclepiadoideae", "Marsdenieae", NA, "Marsdenia",
+  "Apocynaceae", "Asclepiadoideae", "Marsdenieae", NA, "Sarcolobus",
+  "Apocynaceae", "Asclepiadoideae", "Marsdenieae", NA, "Stephanotis",
+  "Apocynaceae", "Asclepiadoideae", "Marsdenieae", NA, "Telosma",
+  "Apocynaceae", "Asclepiadoideae", "Ceropegieae", "Heterostemminae", "Heterostemma",
+  "Apocynaceae", "Asclepiadoideae", "Ceropegieae", "Leptadeniinae", "Leptadenia",
+  "Apocynaceae", "Asclepiadoideae", "Ceropegieae", "Stapeliinae", "Caralluma",
+  "Apocynaceae", "Asclepiadoideae", "Ceropegieae", "Stapeliinae", "Ceropegia",
+  "Apocynaceae", "Asclepiadoideae", "Ceropegieae", "Stapeliinae", "Huernia",
+  "Apocynaceae", "Asclepiadoideae", "Ceropegieae", "Stapeliinae", "Orbea",
+  "Apocynaceae", "Asclepiadoideae", "Ceropegieae", "Stapeliinae", "Stapelia",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Asclepiadinae", "Asclepias",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Asclepiadinae", "Aspidoglossum",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Asclepiadinae", "Calotropis",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Asclepiadinae", "Gomphocarpus",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Asclepiadinae", "Kanahia",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Asclepiadinae", "Oxystelma",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Asclepiadinae", "Pachycarpus",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Asclepiadinae", "Pergularia",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Asclepiadinae", "Schizoglossum",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Asclepiadinae", "Stathmostelma",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Cynanchinae", "Cynanchum",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Tylophorinae", "Pentatropis",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Tylophorinae", "Vincetoxicum",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Oxypetalinae", "Araujia",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Oxypetalinae", "Oxypetalum",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Gonolobinae", "Gonolobus",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Gonolobinae", "Ibatia",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Gonolobinae", "Macroscepis",
+  "Apocynaceae", "Asclepiadoideae", "Asclepiadeae", "Gonolobinae", "Matelea",
+  "Apocynaceae", NA, NA, NA, "Leichhardtia"
+)
+
+standardize_hosts <- function(df) {
+  df %>%
+    left_join(powo_recode, by = "plant_genus_original") %>%
+    mutate(plant_genus = coalesce(plant_genus, plant_genus_original)) %>%
+    left_join(
+      plant_taxonomy,
+      by = c("plant_family_original" = "plant_family", "plant_genus"),
+      suffix = c("", "_taxonomy")
+    ) %>%
+    rename(plant_family = plant_family_original) %>%
+    select(
+      record_id, butterfly_family, butterfly_subfamily, butterfly_genus,
+      butterfly_epithet, butterfly_subspecies, butterfly_species,
+      plant_family, plant_subfamily, plant_tribe, plant_subtribe,
+      plant_genus, plant_genus_original, plant_species, country, source,
+      secondary_source, date
+    )
+}
+
+hosts_standardized <- standardize_hosts(hosts_filtered)
+cat("Standardized records:", nrow(hosts_standardized), "\n")
+```
+
+# 4. Integrate the outgroups (*Mechanitis polymnia*, *Heliconius erato*)
+
+`HOSTS_Mechanitis_Heliconius.csv` holds the *Mechanitis* and *Heliconius* host
+records in the HOSTS column schema. We keep only the two species that are tips in
+the Danaini tree and run them through the same cleaning / standardization used
+above.
+
+```{r read-outgroups}
+outgroup_raw <- read.csv(
+  file.path(in_dir, "HOSTS_Mechanitis_Heliconius.csv"),
+  check.names = FALSE, stringsAsFactors = FALSE, na.strings = c("", "NA")
+)
+
+outgroup_tips <- c("Mechanitis polymnia", "Heliconius erato")
+
+outgroup_standardized <- outgroup_raw %>%
+  hosts_schema() %>%
+  mutate(record_id = paste0("outgroup_", row_number()), .before = 1) %>%
+  quality_filter() %>%
+  filter(butterfly_species %in% outgroup_tips) %>%
+  standardize_hosts()
+
+cat("Outgroup records kept:\n")
+print(count(outgroup_standardized, butterfly_species))
+
+records <- bind_rows(hosts_standardized, outgroup_standardized)
+```
+
+# 5. Collapse to butterfly species x plant-genus associations
+
+Every pair supported by at least one record is retained; `n_records` counts the
+distinct records supporting each pair.
+
+```{r associations}
+associations <- records %>%
+  group_by(
+    butterfly_family, butterfly_subfamily, butterfly_genus, butterfly_species,
+    plant_family, plant_subfamily, plant_tribe, plant_subtribe, plant_genus
+  ) %>%
+  summarise(
+    n_records = n_distinct(record_id),
+    countries = paste(sort(unique(na.omit(country))), collapse = "; "),
+    sources   = paste(sort(unique(na.omit(source))), collapse = "; "),
+    secondary_sources = paste(sort(unique(na.omit(secondary_source))),
+                              collapse = "; "),
+    .groups = "drop"
+  ) %>%
+  mutate(across(c(countries, sources, secondary_sources), ~ na_if(.x, "")))
+
+cat("Associations (>= 1 record):", nrow(associations), "\n")
+cat("...supported by a single record:", sum(associations$n_records == 1), "\n")
+```
+
+The full association set (`associations`) is retained for the per-species
+host-use states exported for the ancestral state reconstruction (Section 11),
+which must cover every species the reconstruction might place on its tree. The
+figure itself shows only the species that are tips in the Danaini tree
+(`Danaini_in_HOSTS.newick`); a tree-restricted copy, `assoc_tree`, is used for the
+figure matrix and scopes the single-record validation (Section 7) to the
+butterflies that are actually plotted.
+
+```{r restrict-to-tree}
+tree_tips <- clean_name(read.tree(file.path(in_dir, "Danaini_in_HOSTS.newick"))$tip.label)
+
+cat("All species with associations:", n_distinct(associations$butterfly_species), "\n")
+cat("Tree tips:", length(tree_tips), "\n")
+cat("Tree tips with no associations (empty rows in figure):",
+    paste(setdiff(tree_tips, associations$butterfly_species), collapse = ", "),
+    "\n")
+```
+
+# 6. Native-range *Asclepias* coding
+
+```{r biogeography}
+overlap_lut <- read.csv(
+  file.path(in_dir, "butterfly_plant_biogeography.csv"),
+  stringsAsFactors = FALSE
+) %>%
+  mutate(butterfly_species = clean_name(butterfly_species)) %>%
+  distinct(butterfly_species, native_range_overlap)
+
+associations <- associations %>%
+  left_join(overlap_lut, by = "butterfly_species")
+
+# Tree-scoped copy used for the figure matrix and the single-record validation.
+assoc_tree <- associations %>%
+  filter(butterfly_species %in% tree_tips)
+```
+
+# 7. Single-record validation against the BH dataset
+
+A single-record association needs manual validation only when that one record is
+the butterfly's **sole** evidence for the milkweed clade or its **sole** evidence
+for *Asclepias* -- i.e. only then does keeping or dropping it change whether the
+butterfly is scored as a milkweed / *Asclepias* user. Per-butterfly evidence
+counts are taken over the full association set (a non-native *Asclepias* record
+still counts as milkweed-clade evidence, matching Figure 2's coding), while a
+non-native *Asclepias* record is excluded from the "must-validate" set because
+the native-range filter (Section 8) removes it before it can be plotted.
+
+The validated associations live in
+`HOSTS_single_record_milkweed_associations_BH.csv`. If any qualifying case is
+*not* in that file, the notebook stops so the BH file can be updated.
+
+```{r single-record-gate}
+bh_validated <- read.csv(
+  file.path(in_dir, "HOSTS_single_record_milkweed_associations_BH.csv"),
+  check.names = FALSE, stringsAsFactors = FALSE, na.strings = c("", "NA")
+) %>%
+  transmute(
+    butterfly_species = clean_name(butterfly_species),
+    plant_genus       = str_squish(plant_genus)
+  ) %>%
+  filter(!is.na(butterfly_species), butterfly_species != "") %>%
+  distinct()
+
+# Per-butterfly evidence counts (over the tree-scoped associations)
+evidence_counts <- assoc_tree %>%
+  group_by(butterfly_species) %>%
+  summarise(
+    n_milkweed  = sum(plant_subfamily %in% MILKWEED_SUBFAMILIES),
+    n_asclepias = sum(plant_genus == "Asclepias"),
+    .groups = "drop"
+  )
+
+qualifying <- assoc_tree %>%
+  left_join(evidence_counts, by = "butterfly_species") %>%
+  filter(
+    n_records == 1,
+    plant_genus == "Asclepias" | plant_subfamily %in% MILKWEED_SUBFAMILIES
+  ) %>%
+  mutate(
+    sole_milkweed   = plant_subfamily %in% MILKWEED_SUBFAMILIES & n_milkweed == 1,
+    sole_asclepias  = plant_genus == "Asclepias" & n_asclepias == 1,
+    # non-native Asclepias is dropped in Section 8, so never needs validation
+    survives_native = !(plant_genus == "Asclepias" &
+                        !(native_range_overlap %in% "yes")),
+    must_validate   = (sole_milkweed | sole_asclepias) & survives_native,
+    in_bh = paste(butterfly_species, plant_genus) %in%
+            paste(bh_validated$butterfly_species, bh_validated$plant_genus)
+  ) %>%
+  arrange(desc(must_validate), butterfly_species, plant_genus)
+
+write.csv(
+  qualifying %>%
+    select(butterfly_species, plant_family, plant_subfamily, plant_genus,
+           n_records, n_milkweed, n_asclepias, native_range_overlap,
+           sole_milkweed, sole_asclepias, must_validate, in_bh),
+  file.path(out_dir, "Ext_fig1_single_record_to_verify.csv"),
+  row.names = FALSE
+)
+
+to_validate <- qualifying %>% filter(must_validate)
+cat("Single-record cases requiring BH validation:", nrow(to_validate), "\n")
+print(to_validate %>%
+        select(butterfly_species, plant_genus, sole_milkweed, sole_asclepias,
+               native_range_overlap, in_bh))
+
+missing_from_bh <- to_validate %>% filter(!in_bh)
+if (nrow(missing_from_bh) > 0) {
+  stop(
+    "These sole-evidence single-record associations are not validated in ",
+    "HOSTS_single_record_milkweed_associations_BH.csv:\n",
+    paste0("  - ", missing_from_bh$butterfly_species, " -> ",
+           missing_from_bh$plant_genus, collapse = "\n")
+  )
+}
+cat("All qualifying single-record cases are validated in the BH file.\n")
+```
+
+# 8. Apply the curation rules and build the present-association table
+
+```{r present-associations}
+# Pairs to drop: sole-evidence single-record milkweed/Asclepias associations not
+# validated in BH (none remain after the Section 7 guard, but applied defensively).
+drop_pairs <- qualifying %>%
+  filter(must_validate, !in_bh) %>%
+  transmute(key = paste(butterfly_species, plant_genus))
+
+present_associations <- assoc_tree %>%
+  # native-range Asclepias filter
+  filter(!(plant_genus == "Asclepias" & !(native_range_overlap %in% "yes"))) %>%
+  # drop unvalidated sole-evidence single records
+  filter(!(paste(butterfly_species, plant_genus) %in% drop_pairs$key)) %>%
+  # restrict to the plant families shown in the figure
+  filter(plant_family %in% FIGURE_PLANT_FAMILIES) %>%
+  mutate(
+    present    = 1L,
+    tile_state = if_else(plant_genus == "Asclepias", "Asclepias", "Present")
+  ) %>%
+  # native_range_overlap is a species-level attribute used only to filter
+  # Asclepias cells above; it is not written out, since on a per-association row
+  # it would be easily misread as describing that row's plant.
+  select(butterfly_species, plant_family, plant_subfamily, plant_genus,
+         n_records, present, tile_state)
+
+cat("Present associations (Apocynaceae + Moraceae):", nrow(present_associations), "\n")
+cat("...Asclepias cells:", sum(present_associations$plant_genus == "Asclepias"), "\n")
+
+write.csv(
+  present_associations,
+  file.path(out_dir, "Ext_fig1_host_associations.csv"),
+  row.names = FALSE
+)
+```
+
+# 9. Plant-genus annotations (taxonomy + cardenolides)
+
+`known_cardenolide` is a genus-level attribute taken from
+Karageorgi et al. (2019); subfamily/family come from the standardized
+taxonomy. Genera with no cardenolide record are coded 0 (absent/unknown).
+
+```{r plant-annotations}
+cardenolide_lut <- read.csv(
+  file.path(in_dir, "plant_butterfly_long_all.csv"),
+  stringsAsFactors = FALSE
+) %>%
+  mutate(plant_genus = str_squish(plant_genus)) %>%
+  filter(!is.na(plant_genus), plant_genus != "") %>%
+  group_by(plant_genus) %>%
+  summarise(known_cardenolide = max(as.integer(known_cardenolide), na.rm = TRUE),
+            .groups = "drop") %>%
+  mutate(known_cardenolide = if_else(is.finite(known_cardenolide),
+                                     known_cardenolide, 0L))
+
+plant_genus_attributes <- present_associations %>%
+  distinct(plant_genus, plant_family, plant_subfamily) %>%
+  left_join(cardenolide_lut, by = "plant_genus") %>%
+  mutate(known_cardenolide = replace_na(known_cardenolide, 0L)) %>%
+  arrange(plant_family, plant_subfamily, plant_genus)
+
+cat("Plant genera in figure:", nrow(plant_genus_attributes), "\n")
+cat("...with known cardenolides:",
+    sum(plant_genus_attributes$known_cardenolide == 1), "\n")
+
+write.csv(
+  plant_genus_attributes,
+  file.path(out_dir, "Ext_fig1_plant_genus_attributes.csv"),
+  row.names = FALSE
+)
+```
+
+# 10. Butterfly ATPα annotations
+
+The ATPα state of each butterfly species is drawn from
+Karageorgi et al. (2019), the same source used for Figure 2. Only resolved
+states are retained; species without a resolved state are rendered as "unknown"
+in the figure. 
+
+```{r atpa}
+butterfly_atpa <- read.csv(
+  file.path(in_dir, "plant_butterfly_long_all.csv"),
+  stringsAsFactors = FALSE
+) %>%
+  mutate(
+    butterfly_species = clean_name(butterfly_species),
+    atpa_state        = na_if(str_squish(atpa_state), "")
+  ) %>%
+  filter(!is.na(butterfly_species), butterfly_species != "",
+         !is.na(atpa_state), atpa_state != "unknown") %>%
+  group_by(butterfly_species) %>%
+  summarise(atpa_state = first(atpa_state), .groups = "drop")
+
+# Outgroup genotype not recorded in Karageorgi et al. (2019)
+butterfly_atpa <- butterfly_atpa %>%
+  filter(butterfly_species != "Heliconius erato") %>%
+  bind_rows(tibble(butterfly_species = "Heliconius erato", atpa_state = "QAN"))
+
+cat("Butterfly species with a resolved ATPalpha state:", nrow(butterfly_atpa), "\n")
+
+write.csv(
+  butterfly_atpa,
+  file.path(out_dir, "Ext_fig1_butterfly_atpa.csv"),
+  row.names = FALSE
+)
+```
+
+# 11. Per-species host-use states for ancestral state reconstruction
+
+The ancestral state reconstruction in
+`Figure_2/code/Blanca_HOSTS_milkweed_asclepias_ASR.Rmd` operates on a single
+host-use state per species rather than on individual associations. That table is
+produced here, so the reconstruction can read it directly instead of rebuilding
+the associations from the raw records. Each species' ATPα state (Section 10) is
+appended as a final column; species without a resolved ATPα state are left `NA`.
+
+The states follow Figure 2's coding exactly and are therefore derived from the
+**full integrated association set** (`associations`), *before* the figure-specific
+filters of Section 8. In particular, a non-native *Asclepias* record still counts
+as use of the Asclepiadoideae/Secamonoideae clade here, whereas it is dropped from
+the plotted matrix:
+
+- `asclepias` -- the species has an *Asclepias* association whose native range
+  overlaps *Asclepias* (`native_range_overlap == "yes"`);
+- `Asclepiadoideae & Secamonoideae` -- otherwise, the species uses any
+  Asclepiadoideae or Secamonoideae genus (including non-native *Asclepias*);
+- `none` -- no association in the Asclepiadoideae/Secamonoideae clade.
+
+The two-state coding collapses this to native-range *Asclepias* use versus none.
+Because every sole-evidence single-record Asclepiadoideae/Secamonoideae/*Asclepias*
+association is validated in the BH file (Section 7), these states are identical
+whether or not the single-record gate is applied, and the table covers every
+species with at least one host record.
+
+```{r host-use-states}
+host_use_states <- associations %>%
+  group_by(butterfly_species) %>%
+  summarise(
+    has_asclepias             = any(plant_genus == "Asclepias"),
+    has_asclepias_native      = any(plant_genus == "Asclepias" &
+                                    native_range_overlap %in% "yes"),
+    has_asclepiad_secamonoid  = any(plant_subfamily %in% MILKWEED_SUBFAMILIES),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    host_use_3state = case_when(
+      has_asclepias_native     ~ "asclepias",
+      has_asclepiad_secamonoid ~ "Asclepiadoideae & Secamonoideae",
+      TRUE                     ~ "none"
+    ),
+    host_use_2state = if_else(has_asclepias_native, "asclepias", "none")
+  ) %>%
+  # add the ATPalpha state (Section 10); species without a resolved state are NA
+  left_join(butterfly_atpa, by = "butterfly_species") %>%
+  arrange(butterfly_species)
+
+cat("Species with a host-use state:", nrow(host_use_states), "\n")
+cat("Three-state counts:\n");  print(table(host_use_states$host_use_3state))
+cat("Two-state counts:\n");    print(table(host_use_states$host_use_2state))
+
+write.csv(
+  host_use_states,
+  file.path(out_dir, "danaini_host_use_states.csv"),
+  row.names = FALSE
+)
+```

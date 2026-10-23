@@ -1,0 +1,187 @@
+---
+title: "Danaini phylogeny (3/6): congruence with Chazot et al. 2021 and final species filter"
+author: "Naama Weksler & Marianna Karageorgi"
+date: "2026-10-16"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = TRUE, warning = FALSE, dpi = 150)
+```
+
+# Purpose
+
+Two things, in order:
+
+1. **Validate** our ≥1-locus supermatrix tree (from Step 2) against the published, time-calibrated
+   Danaini phylogeny of **Chazot et al. (2021)**, with a congruence visualization: our tree pruned
+   to the species shared with Chazot, internal nodes coloured by whether that exact clade is also
+   recovered by Chazot and sized by bootstrap support.
+2. **Filter** the tree down to the final set of species used downstream, by pruning it to a plain
+   list, `input_data/danaini_tree/species_to_keep.txt`.
+
+Why those species? *Tellervo zoilus* is dropped because the comparison below shows its placement in
+our tree **conflicts with Chazot** — it does not sit where the reference puts it, so we do not trust
+its position and exclude it. The remaining species in the keep-list are the ingroup species that are
+represented in our curated HOSTS host-plant dataset, plus the outgroups that are represented in the
+general HOSTS dataset (*Mechanitis polymnia*, *Heliconius erato*). That membership logic was applied
+once, by hand, to produce `species_to_keep.txt` — see that file's header for the derivation. This
+notebook does **not** re-run any HOSTS logic; it simply prunes the tree to the list, which you can
+edit directly.
+
+# 0. Setup
+
+```{r libs}
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(ape)
+  library(ggtree)
+  library(phangorn)
+})
+
+if (!file.exists("helpers/chazot_congruence.R")) {
+  stop("Can't find helpers/ — set the working directory to code/ first.\n",
+       "  Current getwd(): ", getwd())
+}
+source("helpers/chazot_congruence.R")   # load_chazot(), congruence_vs_chazot()  (adapted, Marianna)
+source("helpers/supermatrix_tree.R")    # export_tree()  (rooted newick + branch-support table)
+```
+
+```{r config}
+# Paths are relative to the code/ folder (the working directory).
+INPUT_ROOT <- Sys.getenv("DANAINI_INPUT", unset = "../input_data/danaini_tree")
+OUT_ROOT   <- Sys.getenv("DANAINI_OUT",   unset = "../output_data/danaini_tree")
+FIG_ROOT   <- Sys.getenv("DANAINI_FIG",   unset = "../visuals/danaini_tree")
+dir.create(FIG_ROOT, recursive = TRUE, showWarnings = FALSE)
+
+TREE_DIR   <- file.path(OUT_ROOT, "supermatrix_ge1")
+OUR_TREE   <- file.path(TREE_DIR, "supermatrix_ge1.treefile")
+CHAZOT_NEX <- file.path(INPUT_ROOT, "Chazot_Supplementary_Tree_2.nex")
+KEEP_LIST  <- file.path(INPUT_ROOT, "species_to_keep.txt")
+ROOT_TAXON <- "Heliconius_erato"
+```
+
+# 1. Load the two trees
+
+```{r load-trees}
+stopifnot(file.exists(OUR_TREE), file.exists(CHAZOT_NEX))
+our <- read.tree(OUR_TREE)
+if (ROOT_TAXON %in% our$tip.label) our <- root(our, outgroup = ROOT_TAXON, resolve.root = TRUE)
+cat("Our tree:", length(our$tip.label), "species\n")
+
+chazot <- load_chazot(CHAZOT_NEX)
+cat("Chazot tree:", length(chazot$ref$tip.label), "tips |",
+    length(unique(na.omit(chazot$ref_sp))), "distinct species\n")
+```
+
+# 2. Congruence with Chazot et al. 2021
+
+```{r congruence, fig.width=8, fig.height=10}
+cong <- congruence_vs_chazot(our, chazot,
+                             title = "Supermatrix (≥1 locus) — clades recovered in Chazot",
+                             root_taxon = ROOT_TAXON)
+
+cat(sprintf("Shared species: %d | clades recovered in Chazot: %d%% | RF = %d (normalized %.3f)\n",
+            cong$n_shared, cong$pct_recovered, cong$rf, cong$rf_norm))
+
+ggsave(file.path(FIG_ROOT, "congruence_vs_chazot.png"), cong$plot,
+       width = 8, height = 10, dpi = 150)
+cong$plot
+```
+
+Green nodes are clades our tree recovers that Chazot also recovers; orange nodes conflict. High
+overall recovery with conflicts concentrated at weakly supported (small) nodes is the expected,
+reassuring pattern.
+
+# 3. Why *Tellervo zoilus* is excluded
+
+*Tellervo zoilus* is one of our outgroup species and is present in the Chazot reference, so it enters
+the comparison above. Its placement in our supermatrix tree **does not agree with Chazot** — the
+split that subtends it in our tree is not recovered in the reference. We therefore treat its position
+as unreliable and drop it from the downstream tree rather than let a misplaced outgroup distort
+rooting or host-state reconstruction. The chunk below records its immediate neighbour in each tree so
+the disagreement is explicit.
+
+```{r tellervo-check}
+TELLERVO <- "Tellervo_zoilus"
+neighbour_in <- function(phy) {
+  if (!(TELLERVO %in% phy$tip.label)) return(NA_character_)
+  tip <- which(phy$tip.label == TELLERVO)
+  parent <- phy$edge[phy$edge[, 2] == tip, 1]
+  sibs <- phy$edge[phy$edge[, 1] == parent, 2]
+  sib_tips <- sibs[sibs != tip & sibs <= length(phy$tip.label)]
+  if (length(sib_tips)) paste(phy$tip.label[sib_tips], collapse = ", ") else "(an internal clade)"
+}
+cat("In our tree, Tellervo_zoilus sits next to:", neighbour_in(cong$our_pruned), "\n")
+cat("In Chazot,   Tellervo_zoilus sits next to:", neighbour_in(cong$ref_pruned), "\n")
+```
+
+# 4. Filter the tree to the final species set
+
+Prune our tree to `input_data/danaini_tree/species_to_keep.txt` (one `Genus_species` per line;
+`#` lines are comments). No HOSTS datasets are read here — the keep-list already encodes that
+decision.
+
+```{r filter}
+keep <- readLines(KEEP_LIST) |> trimws()
+keep <- keep[nzchar(keep) & !startsWith(keep, "#")]
+cat("Keep-list:", length(keep), "species\n")
+
+missing <- setdiff(keep, our$tip.label)
+if (length(missing))
+  warning("Keep-list species absent from the tree (ignored): ", paste(missing, collapse = ", "))
+
+keep_present <- intersect(keep, our$tip.label)
+dropped      <- setdiff(our$tip.label, keep_present)
+
+# `our` is already rooted on Heliconius (§1); keep.tip keeps the rooting and
+# node labels, so do NOT re-root (re-rooting misaligns node.label).
+filtered <- keep.tip(our, keep_present)
+
+cat("Filtered tree:", length(filtered$tip.label), "species | dropped",
+    length(dropped), "\n")
+cat("Dropped:", paste(sort(dropped), collapse = ", "), "\n")
+```
+
+```{r write-filtered, fig.width=8, fig.height=10}
+# The filtered tree IS the butterfly phylogeny the figure uses, so write it straight to
+# where the figure pipeline reads it (input_data/host_matrix/Danaini_in_HOSTS.newick),
+# together with its branch-support table. export_tree() writes the newick + support CSV.
+figure_tree <- "../input_data/host_matrix/Danaini_in_HOSTS.newick"
+out_support <- file.path(TREE_DIR, "branch_support_filtered.csv")
+export_tree(filtered, figure_tree, out_support)
+
+dropped_tbl <- tibble(
+  species = sort(dropped),
+  reason  = ifelse(species == "Tellervo_zoilus",
+                   "placement conflicts with Chazot (see §3)",
+                   "not in species_to_keep.txt (absent from curated HOSTS dataset)")
+)
+write_csv(dropped_tbl, file.path(OUT_ROOT, "filtered_out_species.csv"))
+
+p_filt <- ggtree(filtered) + geom_tiplab(size = 2.4) +
+  geom_nodelab(size = 1.8, hjust = -0.2, color = "#2c7fb8") +
+  ggtitle(sprintf("Final filtered tree (%d species)", length(filtered$tip.label))) +
+  theme_tree2() + xlim(0, NA)
+ggsave(file.path(FIG_ROOT, "supermatrix_ge1_filtered_tree.pdf"), p_filt,
+       width = 8, height = 10, limitsize = FALSE)
+
+cat("Wrote:", figure_tree,
+    "| branch_support_filtered.csv | filtered_out_species.csv | filtered-tree PDF\n")
+```
+
+# Notes
+
+- Inputs consumed: `output_data/danaini_tree/supermatrix_ge1/supermatrix_ge1.treefile` (Step 2),
+  `input_data/danaini_tree/Chazot_Supplementary_Tree_2.nex`, and
+  `input_data/danaini_tree/species_to_keep.txt`.
+- Outputs: `visuals/danaini_tree/congruence_vs_chazot.png`; the filtered tree written straight to
+  the figure's input as `input_data/host_matrix/Danaini_in_HOSTS.newick`, with its branch-support
+  table `output_data/danaini_tree/supermatrix_ge1/branch_support_filtered.csv`;
+  `output_data/danaini_tree/filtered_out_species.csv`; and the filtered-tree figure.
+- To change which species survive, edit `species_to_keep.txt` and re-run §4 — no code changes needed.
+- The filtered tree is rooted on *Heliconius erato*; re-root downstream if your analysis needs a
+  different outgroup.

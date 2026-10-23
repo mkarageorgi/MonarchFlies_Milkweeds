@@ -1,0 +1,20 @@
+#nexus
+begin sets;
+  charset COI_pos1 = 1-666\3;
+  charset COI_pos2_ArgKin_pos1_ArgKin_pos2_CAD_pos2_DDC_pos2_EF1a_pos2_GAPDH_pos2_IDH_pos2_MDH_pos2_RpS5_pos2_RpS2_pos2_wg_pos2_Atpa_pos2 = 2-666\3  667-1068\3  668-1068\3  1070-2931\3  2933-3639\3  3641-4704\3  4706-5313\3  5315-6015\3  6017-6747\3  6749-7302\3  7304-7710\3  7712-8109\3  8111-10452\3;
+  charset COI_pos3 = 3-666\3;
+  charset ArgKin_pos3_EF1a_pos3_RpS5_pos3_Atpa_pos3 = 669-1068\3  3642-4704\3  6750-7302\3  8112-10452\3;
+  charset CAD_pos1_DDC_pos1_IDH_pos1_MDH_pos1_RpS2_pos1_wg_pos1 = 1069-2931\3  2932-3639\3  5314-6015\3  6016-6747\3  7303-7710\3  7711-8109\3;
+  charset CAD_pos3_IDH_pos3_MDH_pos3 = 1071-2931\3  5316-6015\3  6018-6747\3;
+  charset DDC_pos3_GAPDH_pos3_RpS2_pos3_wg_pos3 = 2934-3639\3  4707-5313\3  7305-7710\3  7713-8109\3;
+  charset EF1a_pos1_GAPDH_pos1_RpS5_pos1_Atpa_pos1 = 3640-4704\3  4705-5313\3  6748-7302\3  8110-10452\3;
+  charpartition mymodels =
+    TIM2+F+I+R3: COI_pos1,
+    TIM3+F+I+G4: COI_pos2_ArgKin_pos1_ArgKin_pos2_CAD_pos2_DDC_pos2_EF1a_pos2_GAPDH_pos2_IDH_pos2_MDH_pos2_RpS5_pos2_RpS2_pos2_wg_pos2_Atpa_pos2,
+    TIM+F+G4: COI_pos3,
+    GTR+F+G4: ArgKin_pos3_EF1a_pos3_RpS5_pos3_Atpa_pos3,
+    GTR+F+G4: CAD_pos1_DDC_pos1_IDH_pos1_MDH_pos1_RpS2_pos1_wg_pos1,
+    HKY+F+I+G4: CAD_pos3_IDH_pos3_MDH_pos3,
+    TVM+F+G4: DDC_pos3_GAPDH_pos3_RpS2_pos3_wg_pos3,
+    TIM+F+I: EF1a_pos1_GAPDH_pos1_RpS5_pos1_Atpa_pos1;
+end;
