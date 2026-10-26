@@ -1,0 +1,571 @@
+---
+title: "ATPase data in milkweed butterflies and engineered Dmel flies"
+author: "Marianna Karageorgi"
+date: "August 2, 2026"
+---
+
+# 1. Data
+
+The question addressed here is whether the combinations of substitutions observed at ATPα positions 111, 119, and 122 are sufficient to account for the levels of Na⁺/K⁺-ATPase ouabain resistance observed in milkweed butterflies.
+
+Petschenka et al. (2013) measured Na⁺/K⁺-ATPase sensitivity in 14 species of milkweed butterflies (Danaini) and the outgroup *Mechanitis polymnia* using enzymatic assays of extracted Na⁺/K⁺-ATPase. The three-letter codes below denote the amino-acid states at ATPα positions 111, 119, and 122:
+
+-   **LAN:** *Mechanitis polymnia* (outgroup);
+
+-   **LSN:** *Amauris tartarea*, *Euploea core*, *Euploea mulciber*, *Euploea phaenareta*, *Ideopsis juventa*, *Idea leuconoe*, *Lycorea halia*, and *Parantica aglea*;
+
+-   **VSN:** *Danaus chrysippus*, *Danaus genutia*, *Tirumala limniace*, *Tirumala petiverana*, and *Tirumala septentrionis*;
+
+-   **VSH:** *Danaus plexippus*.
+
+Karageorgi et al. (2019) generated *Atpα* knock-in *Drosophila melanogaster* lines carrying the LAN, LSN, VSN, and VSH states at the corresponding ATPα positions. They then measured the ouabain sensitivity of Na⁺/K⁺-ATPase extracted from each engineered line.
+
+Both studies measured Na⁺/K⁺-ATPase sensitivity to ouabain using the same basic colorimetric assay, in which ATPase activity is quantified from the inorganic phosphate released during ATP hydrolysis. Karageorgi et al. used a modified version of the protocol in which the ATP-containing reaction mixture was added directly to the ouabain treatments, without the 10-minute ATP-free preincubation used by Petschenka et al.
+
+To assess the extent to which the engineered ATPα states recapitulate the ouabain resistance of butterfly ATPases, we fitted one dose–response curve for each butterfly species and each engineered *Drosophila* genotype and estimated the corresponding IC₅₀ values.
+
+We then calculated the following three comparisons:
+
+1.  **Cross-study consistency**
+
+    We calculated the ratio between the IC₅₀ of the monarch ATPase measured by Karageorgi et al. (2019) and the IC₅₀ of *D. plexippus* measured by Petschenka et al. (2013):
+
+    $$
+    \text{Cross-study ratio} =
+    \frac{\text{Monarch IC}_{50}\text{ from Karageorgi et al. (2019)}}
+         {\textit{D. plexippus}\text{ IC}_{50}\text{ from Petschenka et al. (2013)}}.
+    $$
+
+    This comparison provides a check of consistency between the two assay datasets.
+
+2.  **Matched-state comparison**
+
+    For each butterfly species, we calculated the ratio between the IC₅₀ of the engineered *Drosophila* line and the IC₅₀ of the butterfly species ATPase carrying the corresponding LAN, LSN, VSN, or VSH state:
+
+    $$
+    \text{Matched-state ratio} =
+    \frac{\text{Engineered }\textit{Drosophila}\text{ IC}_{50}}
+         {\text{Butterfly IC}_{50}}.
+    $$
+
+    A ratio of 1 indicates that the engineered *Drosophila* ATPase and the butterfly ATPase have the same estimated IC₅₀. A ratio greater than 1 indicates higher resistance in the engineered *Drosophila* ATPase, whereas a ratio below 1 indicates higher resistance in the butterfly ATPase.
+
+3.  **Resistance relative to the monarch VSH ATPase**
+
+    For each butterfly carrying the LAN, LSN, or VSN state, we calculated the ratio between its IC₅₀ and that of the VSH ATPase from *D. plexippus*:
+
+    $$
+    \text{Ratio relative to VSH} =
+    \frac{\text{LAN, LSN, or VSN butterfly IC}_{50}}
+         {\textit{D. plexippus}\text{ VSH IC}_{50}}.
+    $$
+
+    Values below 1 indicate that the LAN, LSN, or VSN butterfly ATPase is less resistant to ouabain than the VSH ATPase of *D. plexippus*.
+
+```{r}
+library(tidyverse)
+```
+
+## 1.1 Petschenka et al. 2013: Na+/K+ ATPase data from milkweed butterflies
+
+Petschenka et al. (2013) measured Na⁺/K⁺-ATPase sensitivity to ouabain in 15 butterfly species. Each species was represented by 3–9 biological ATPase preparations, with two technical measurements performed for each biological preparation at each ouabain concentration. The raw absorbance measurements from the colorimetric assays were deposited in Dryad.
+
+Here, we use these raw absorbance data to calculate Na⁺/K⁺-ATPase activity at different ouabain concentrations, expressed as a percentage of the activity measured in the absence of ouabain.
+
+**Data structure**
+
+-   **Level 1:** butterfly species
+
+-   **Level 2:** 3–9 independent butterfly preparations/butterfly species (biological replication)
+
+-   **Level 3:** two measurements per butterfly preparation and reaction condition (technical replication)
+
+**Calculation of Na⁺/K⁺-ATPase activity [% of non-inhibited control]**
+
+Na⁺/K⁺-ATPase activity was quantified from the inorganic phosphate released during ATP hydrolysis. Crude nervous-tissue preparations were incubated in a complete reaction buffer containing NaCl, KCl, MgCl₂, and imidazole, together with ouabain concentrations ranging from (10\^{-8}) to (10\^{-3}) M.
+
+Following a 10-minute preincubation at 37°C, reactions were initiated by adding ATP. Reactions were stopped after 20 minutes, and phosphate release was quantified photometrically at 655 nm. Reactions performed without ouabain represented the non-inhibited control.
+
+Because the crude tissue preparations contained other ATPases capable of hydrolysing ATP, two KCl-free controls were included. `Zero 1` measured phosphate release by ATPases that remained active in the absence of KCl. `Zero 2` additionally contained 2 mM ouabain and therefore measured the activity of ouabain-insensitive contaminating ATPases under conditions in which Na⁺/K⁺-ATPase was inhibited.
+
+We used `Zero 2` as the background measurement and subtracted it from both the ouabain-treated reactions and the corresponding no-ouabain control. Na⁺/K⁺-ATPase activity, expressed as a percentage of the non-inhibited control, was calculated as:
+
+$$
+\text{Residual activity (\%)} =
+\frac{A_{\text{dose}} - A_{\text{Zero 2}}}
+     {A_{\text{control}} - A_{\text{Zero 2}}}
+\times 100
+$$
+
+The photometric measurements reported in Petschenka et al. (2013), *Stepwise evolution of resistance to toxic cardenolides via genetic substitutions in the Na⁺/K⁺-ATPase of milkweed butterflies*, were first transcribed into the file `Petschenka2013_NaKATPase_raw_absorbance.csv` (in `../input_data/`).
+
+```{r}
+# Read the raw absorbance data
+butterfly.raw = read.csv("../input_data/Petschenka2013_NaKATPase_raw_absorbance.csv") %>%
+  rename(Reaction_Conditions = Dose, Technical_Replicate = Replicate) %>%
+  filter(
+    !(Species_ATPase == "genutia_5" &
+        Reaction_Conditions == "control_no_ouabain" &
+        Technical_Replicate == 2),
+    !(Species_ATPase == "mulciber_1" &
+        Reaction_Conditions == "1e-7" &
+        Technical_Replicate == 1)
+  )
+
+# Calculate preparation-level control and background absorbance
+butterfly.references = butterfly.raw %>%
+  filter(Reaction_Conditions %in% c(
+    "control_no_ouabain",
+    "zero_2_no_KCl_plus_2mM_ouabain"
+  )) %>%
+  group_by(Species_ATPase, Reaction_Conditions) %>%
+  summarise(Reference_Absorbance = mean(Absorbance_655, na.rm = TRUE),
+            .groups = "drop") %>%
+  pivot_wider(names_from = Reaction_Conditions,
+              values_from = Reference_Absorbance) %>%
+  rename(
+    Control_Absorbance = control_no_ouabain,
+    Zero2_Absorbance = zero_2_no_KCl_plus_2mM_ouabain
+  )
+
+# Normalize each technical dose measurement within its biological preparation
+Petschenka.activity = butterfly.raw %>%
+  filter(str_detect(Reaction_Conditions, "^1e-")) %>%
+  left_join(butterfly.references, by = "Species_ATPase") %>%
+  mutate(
+    Species = str_remove(Species_ATPase, "_[0-9]+$"),
+      Species = case_when(
+      Species == "polymnia"      ~ "Mechanitis polymnia",
+      Species == "tartarea"      ~ "Amauris tartarea",
+      Species == "core"          ~ "Euploea core",
+      Species == "mulciber"      ~ "Euploea mulciber",
+      Species == "phaenareta"    ~ "Euploea phaenareta",
+      Species == "juventa"       ~ "Ideopsis juventa",
+      Species == "leuconoe"      ~ "Idea leuconoe",
+      Species == "halia"         ~ "Lycorea halia",
+      Species == "aglea"         ~ "Parantica aglea",
+      Species == "chrysippus"    ~ "Danaus chrysippus",
+      Species == "genutia"       ~ "Danaus genutia",
+      Species == "limniace"      ~ "Tirumala limniace",
+      Species == "petiverana"    ~ "Tirumala petiverana",
+      Species == "septentrionis" ~ "Tirumala septentrionis",
+      Species == "plexippus"     ~ "Danaus plexippus",
+      TRUE                                 ~ Species
+    ),
+    ATPase_State = case_when(
+      Species == "Mechanitis polymnia" ~ "LAN",
+      Species %in% c(
+        "Amauris tartarea", "Euploea core", "Euploea mulciber",
+        "Euploea phaenareta", "Ideopsis juventa", "Idea leuconoe",
+        "Lycorea halia", "Parantica aglea"
+      ) ~ "LSN",
+      Species %in% c(
+        "Danaus chrysippus", "Danaus genutia", "Tirumala limniace",
+        "Tirumala petiverana", "Tirumala septentrionis"
+      ) ~ "VSN",
+      Species == "Danaus plexippus" ~ "VSH",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  transmute(
+    Dataset = "Petschenka et al. 2013",
+    Species,
+    ATPase_State,
+    Biol_Rep = parse_number(Species_ATPase),
+    Tech_Rep = Technical_Replicate,
+    Dose = as.numeric(Reaction_Conditions),
+    Activity = 100 * (Absorbance_655 - Zero2_Absorbance) /
+      (Control_Absorbance - Zero2_Absorbance)
+  ) %>%
+  arrange(ATPase_State, Species, Biol_Rep, Tech_Rep, Dose)
+```
+
+## 1.2 Karageorgi et al 2019: Na+/K+ ATPase data from engineered Dmel flies
+
+Karageorgi et al. (2019) measured Na⁺/K⁺-ATPase sensitivity to ouabain in engineered *Drosophila melanogaster* lines carrying the LAN, LSN, VSN, and VSH ATPα states. Each engineered genotype was represented by one biological ATPase preparation, which was assayed across 4–7 technical plates.
+
+The dataset also included reference ATPases from *Danaus plexippus* and *Sus scrofa*. Each engineered genotype or reference ATPase was represented by one preparation. For the engineered *D. melanogaster* lines, each preparation consisted of a pool of flies of the corresponding genotype.
+
+The published source data report Na⁺/K⁺-ATPase activity at each ouabain concentration as a percentage of the corresponding non-inhibited control. No additional background correction or normalization was therefore required.
+
+**Data structure**
+
+-   **Level 1:** engineered *D. melanogaster* knock-in ATPα line or reference ATPase from *Danaus plexippus* or *Sus scrofa*; one ATPase preparation per genotype or reference source;
+
+-   **Level 2:** 4–7 assay plates per ATPase preparation, representing technical replication.
+
+```{r}
+# Fig. 3a source data from Karageorgi et al. (2019), converted from the published
+# Excel supplement (sheet "Fig3a", cells A3:H82) to CSV. Read as text so the block
+# layout — ATPase name, "plate N" headers, and "*"-flagged exclusions — is preserved.
+Karageorgi.raw = read.csv(
+  "../input_data/Karageorgi2019_Fig3a_NaKATPase_activity.csv",
+  colClasses = "character"
+)
+
+# Convert each ATPase block to long format
+parse_block = function(i) {
+
+  block = Karageorgi.raw[i:(i + 7), ]
+
+  atpase = str_squish(block[[1]][1])
+  plates = str_squish(unlist(block[1, -1]))
+  keep = which(str_detect(plates, "^plate\\s*[0-9]+$"))
+
+  block[3:8, c(1, keep + 1)] %>%
+    setNames(c("Log10_Dose", plates[keep])) %>%
+    pivot_longer(-Log10_Dose, names_to = "Plate", values_to = "Activity_raw") %>%
+    transmute(
+      Dataset = "Karageorgi et al. 2019",
+      Species = str_remove(atpase, "\\s+ATPase$"),
+      Biol_Rep = 1L,
+      Tech_Rep = parse_number(Plate),
+      Dose = 10^parse_number(Log10_Dose),
+      Activity = parse_number(Activity_raw),
+      Excluded = str_detect(Activity_raw, fixed("*"))
+    )
+}
+
+# Parse all ATPase preparations and assign ATPα states
+Karageorgi.activity = map_dfr(
+  seq(1, nrow(Karageorgi.raw), by = 8),
+  parse_block
+) %>%
+  filter(!Excluded, !is.na(Activity)) %>%
+  mutate(
+    Species = case_when(
+      Species == "Monarch butterfly" ~ "Danaus plexippus",
+      Species == "Pig" ~ "Sus scrofa",
+      TRUE ~ Species
+    ),
+    ATPase_State = case_when(
+      Species == "Drosophila LAN" ~ "LAN",
+      Species == "Drosophila LSN" ~ "LSN",
+      Species == "Drosophila VSN" ~ "VSN",
+      Species == "Drosophila VSH" ~ "VSH",
+      Species == "Danaus plexippus" ~ "VSH",
+      Species == "Sus scrofa" ~ "QQN",
+      Species == "Drosophila QAH" ~ "QAH",
+      Species == "Drosophila QAN" ~ "QAN",
+      Species == "Drosophila QAN*" ~ "QAN*",
+      Species == "Drosophila QSN" ~ "QSN",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  dplyr::select(Dataset, Species, ATPase_State, Biol_Rep, Tech_Rep, Dose, Activity) %>%
+  arrange(ATPase_State, Species, Biol_Rep, Tech_Rep, Dose)
+```
+
+## 1.3 Dataset combination
+
+```{r}
+ATPase.activity.combined = bind_rows(Petschenka.activity, Karageorgi.activity)%>%
+  arrange(Dataset, ATPase_State, Species, Biol_Rep, Tech_Rep, Dose)
+```
+
+# 2. Estimate IC50s
+
+We fitted a separate dose–response curve for each biological ATPase preparation.
+
+For the Petschenka et al. (2013) dataset, this resulted in 3–9 independently fitted curves per butterfly species, corresponding to the 3–9 biological ATPase preparations. The two technical measurements at each ouabain concentration were retained as repeated measurements contributing to the fit of the corresponding biological-replicate curve.
+
+For the Karageorgi et al. (2019) dataset, each engineered *Drosophila melanogaster* genotype or reference ATPase was represented by one biological preparation. We therefore fitted one curve per genotype or reference ATPase, using the measurements from the 4–7 technical assay plates.
+
+For each biological preparation, we fitted a four-parameter log-logistic dose–response model with the lower and upper asymptotes fixed at 0% and 100%, respectively. The slope and IC₅₀ were estimated separately for each curve.
+
+```{r}
+library(drc)
+library(purrr)
+library(tidyr)
+
+# Fit one four-parameter log-logistic curve
+fit_LL4 = function(df) {
+  drm(
+    Activity ~ Dose,
+    data = df,
+    fct = LL.4(fixed = c(
+      NA,   # estimate slope
+      0,    # lower asymptote fixed at 0
+      100,  # upper asymptote fixed at 100
+      NA    # estimate IC50
+    ))
+  )
+}
+
+# Extract the IC50 and its confidence interval
+extract_IC50 = function(model) {
+  ed = as.data.frame(
+    ED(model, 50, interval = "delta", display = FALSE)
+  )
+
+  tibble(
+    IC50 = ed$Estimate[1],
+    IC50_SE = ed$`Std. Error`[1],
+    IC50_Lower = ed$Lower[1],
+    IC50_Upper = ed$Upper[1]
+  )
+}
+```
+
+```{r}
+# Fit one curve per biological ATPase preparation
+ATPase.replicate.models = ATPase.activity.combined %>%
+  group_by(Dataset, Species, ATPase_State, Biol_Rep) %>%
+  nest() %>%
+  ungroup() %>%
+  mutate(
+    model = map(data, fit_LL4),
+    IC50 = map(model, extract_IC50)
+  )
+```
+
+```{r}
+# Extract the biological-replicate IC50 estimates
+IC50.replicates = ATPase.replicate.models %>%
+  dplyr::select(Dataset, Species, ATPase_State, Biol_Rep, IC50) %>%
+  unnest(IC50) %>%
+  arrange(Dataset, ATPase_State, Species, Biol_Rep)
+
+IC50.replicates = IC50.replicates %>%
+  mutate(across(starts_with("IC50"), ~ signif(.x, 3)))
+
+IC50.replicates
+```
+
+```{r}
+library(openxlsx)
+openxlsx::write.xlsx(IC50.replicates,"../output_data/Supplementary_Table_ATPase_IC50_replicates.xlsx", overwrite = TRUE)
+```
+
+# 3. IC50s comparison and plotting
+
+## 3.1 Cross-study consistency
+
+We compared the monarch ATPase IC₅₀ measured by Karageorgi et al. (2019) with the mean IC₅₀ across the *D. plexippus* biological preparations measured by Petschenka et al. (2013):
+
+$$
+\text{Cross-study ratio} =
+\frac{\text{Karageorgi monarch IC}_{50}}
+     {\text{Mean Petschenka }\textit{D. plexippus}\text{ IC}_{50}}.
+$$
+
+Because Petschenka et al. included several biological preparations whereas Karageorgi et al. included one monarch preparation, we also determined whether the model-derived confidence interval of the Karageorgi estimate overlapped the confidence interval of each Petschenka biological-replicate estimate.
+
+```{r}
+Karageorgi.monarch = IC50.replicates %>%
+  filter(Dataset == "Karageorgi et al. 2019", Species == "Danaus plexippus") %>%
+  dplyr::select(Karageorgi_IC50 = IC50, Karageorgi_Lower = IC50_Lower,
+                Karageorgi_Upper = IC50_Upper) %>%
+  slice(1)
+
+Cross.study.comparison = IC50.replicates %>%
+  filter(Dataset == "Petschenka et al. 2013", Species == "Danaus plexippus") %>%
+  mutate(CI_overlap = pmax(IC50_Lower, Karageorgi.monarch$Karageorgi_Lower) <=
+           pmin(IC50_Upper, Karageorgi.monarch$Karageorgi_Upper)) %>%
+  summarise(
+    Karageorgi_IC50 = Karageorgi.monarch$Karageorgi_IC50,
+    Petschenka_IC50 = mean(IC50, na.rm = TRUE),
+    Cross_study_ratio = Karageorgi_IC50 / Petschenka_IC50,
+    n_Biol_Rep = n(),
+    n_overlapping = sum(CI_overlap),
+    all_overlap = all(CI_overlap),
+    any_overlap = any(CI_overlap)
+  )
+
+Cross.study.comparison
+```
+
+## 3.2 Matched-state comparison
+
+We first calculate the mean IC₅₀ across biological preparations for each butterfly species and the corresponding IC₅₀ for each engineered Drosophila genotype. Butterfly species are then matched to the engineered genotype carrying the same ATPα state, and fold differences are calculated as the engineered Drosophila IC₅₀ divided by the butterfly-species IC₅₀.
+
+$$
+\text{Fold difference} =
+\frac{\text{Engineered }\textit{Drosophila}\text{ IC}_{50}}
+     {\text{Butterfly-species IC}_{50}}.
+$$
+
+For each ATPα state, we summarized the mean butterfly IC₅₀ and the range of fold differences across species. The plot shows butterfly-species means as faint points, the butterfly-state mean as a solid circle, and the matched engineered Drosophila value as a square on a logarithmic IC₅₀ axis.
+
+```{r}
+ATPase.levels = c("QAN", "LAN", "LSN", "VSN", "VSH")
+
+# Mean IC50 across biological preparations for each butterfly species
+Butterfly.IC50.summary = IC50.replicates %>%
+  filter(Dataset == "Petschenka et al. 2013") %>%
+  group_by(Species, ATPase_State) %>%
+  summarise(IC50 = mean(IC50, na.rm = TRUE), .groups = "drop") %>%
+  mutate(ATPase_State = factor(ATPase_State, levels = ATPase.levels))
+
+# IC50 for each engineered Drosophila genotype, including QAN but not QAN*
+Drosophila.IC50.summary = IC50.replicates %>%
+  filter(Dataset == "Karageorgi et al. 2019",
+         Species %in% c("Drosophila QAN", "Drosophila LAN", "Drosophila LSN",
+                        "Drosophila VSN", "Drosophila VSH")) %>%
+  group_by(Species, ATPase_State) %>%
+  summarise(Drosophila_IC50 = mean(IC50, na.rm = TRUE), .groups = "drop") %>%
+  mutate(ATPase_State = factor(ATPase_State, levels = ATPase.levels))
+```
+
+```{r}
+# Match butterfly species to engineered Drosophila genotypes carrying the same ATPα state
+Butterfly.IC50.matched = Butterfly.IC50.summary %>%
+  left_join(Drosophila.IC50.summary %>%
+              dplyr::select(ATPase_State, Drosophila_IC50),
+            by = "ATPase_State") %>%
+  mutate(Fold_change = Drosophila_IC50 / IC50)
+
+# Calculate butterfly-state means and ranges of matched fold differences
+format_fold = function(x) {
+  if_else(x >= 1, sprintf("%.1f", x), sprintf("%.2f", x))
+}
+
+IC50.state.summary = Butterfly.IC50.matched %>%
+  group_by(ATPase_State) %>%
+  summarise(
+    Butterfly_State_IC50 = mean(IC50, na.rm = TRUE),
+    Drosophila_IC50 = first(Drosophila_IC50),
+    n_species = n(),
+    Min_fold_change = min(Fold_change, na.rm = TRUE),
+    Max_fold_change = max(Fold_change, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    Range_Label = if_else(
+      n_species == 1,
+      paste0(format_fold(Min_fold_change), "×"),
+      paste0(format_fold(Min_fold_change), "–",
+             format_fold(Max_fold_change), "×")
+    ),
+    Label_x = sqrt(Butterfly_State_IC50 * Drosophila_IC50),
+    ATPase_State = factor(ATPase_State, levels = ATPase.levels)
+  )
+```
+
+```{r}
+ATPase.colors = c(QAN = "#737373", LAN = "#3a6a9e", LSN = "#fec12b",
+                  VSN = "#f36f21", VSH = "#ed1c2c")
+
+IC50.state.plot = ggplot() +
+
+  # Connect each butterfly-state mean to the matched engineered Drosophila value
+  geom_segment(data = IC50.state.summary,
+               aes(x = Butterfly_State_IC50, xend = Drosophila_IC50,
+                   y = ATPase_State, yend = ATPase_State),
+               linewidth = 0.7, color = "black") +
+
+  # Mean IC50 for each butterfly species
+  geom_point(data = Butterfly.IC50.summary,
+             aes(x = IC50, y = ATPase_State, color = ATPase_State),
+             position = position_jitter(width = 0, height = 0.05),
+             shape = 16, size = 2, alpha = 0.3, show.legend = FALSE) +
+
+  # Mean IC50 across butterfly species within each ATPα state
+  geom_point(data = IC50.state.summary,
+             aes(x = Butterfly_State_IC50, y = ATPase_State, color = ATPase_State),
+             shape = 16, size = 4, alpha = 1, show.legend = FALSE) +
+
+  # Engineered Drosophila genotypes, including the unmatched QAN state
+  geom_point(data = Drosophila.IC50.summary,
+             aes(x = Drosophila_IC50, y = ATPase_State, color = ATPase_State),
+             shape = 15, size = 4, alpha = 0.8, show.legend = FALSE) +
+
+  # Range of engineered Drosophila / butterfly-species fold differences
+  geom_text(data = IC50.state.summary,
+            aes(x = Label_x, y = ATPase_State, label = Range_Label),
+            vjust = -1, size = 3.5, color = "black") +
+
+ scale_x_log10(
+  breaks = 10^(-7:-4),
+  labels = scales::parse_format()(paste0("10^", -7:-4))) +
+coord_cartesian(xlim = c(1e-7, 1.2e-4))+
+  scale_y_discrete(drop = FALSE) +
+  scale_color_manual(values = ATPase.colors) +
+
+  labs(x = expression(IC[50] * ", ouabain concentration causing 50% inhibition [M]"),
+       y = expression("ATP" * alpha * " state")) +
+
+  theme_classic() +
+  theme(legend.position = "none")
+
+IC50.state.plot
+
+ggsave("../visuals/IC50_by_ATPase_state_means.png", IC50.state.plot, width = 8, height = 5, dpi = 300)
+```
+
+**Supplementary Figure 3. Engineering into *D. melanogaster* ATPα the substitutions at positions 111, 119, and 122 observed in milkweed butterflies and an outgroup largely recapitulates the ouabain resistance of the corresponding butterfly ATPases.** Ouabain IC₅₀ values are shown for Na⁺/K⁺-ATPases from Danaini butterflies, the outgroup *Mechanitis polymnia*, and engineered *Drosophila melanogaster* lines carrying the QAN, LAN, LSN, VSN, and VSH ATPα states. Butterfly species carrying each state were *M. polymnia* (LAN); *Amauris tartarea*, *Euploea core*, *E. mulciber*, *E. phaenareta*, *Ideopsis juventa*, *Idea leuconoe*, *Lycorea halia*, and *Parantica aglea* (LSN); *Danaus chrysippus*, *D. genutia*, *Tirumala limniace*, *T. petiverana*, and *T. septentrionis* (VSN); and *Danaus plexippus* (VSH). Data are from Petschenka et al. (2013) and Karageorgi et al. (2019). Pale circles represent the mean IC₅₀ across biological preparations for each butterfly species, and the larger solid circle represents the mean of these species-level estimates within each ATPα state. Squares show the IC₅₀ of the corresponding engineered *D. melanogaster* genotype. Labels indicate the range of fold differences across butterfly species, calculated as the engineered-*Drosophila* IC₅₀ divided by the butterfly-species IC₅₀. The engineered QAN *D. melanogaster* genotype is shown as an unmatched ouabain-sensitive reference. Ouabain IC₅₀ values were estimated by fitting a four-parameter log-logistic dose–response model separately to each biological ATPase preparation from each butterfly species and engineered *D. melanogaster* ATPα knock-in line (See Supplementary Table).
+
+## 3.3 Resistance of other states **relative to the VSH state**
+
+### 3.3.1 Butterflies
+
+For each butterfly carrying the LAN, LSN, or VSN state, we calculated the ratio between its IC₅₀ and that of the VSH ATPase from D. plexippus:
+
+$$
+\text{fold less resistant} =
+\frac{\text{VSH IC}_{50}}
+     {\text{LAN, LSN, or VSN IC}_{50}}.
+$$
+
+Values below 1 indicate that the LAN, LSN, or VSN butterfly ATPase is less resistant to ouabain than the VSH ATPase of D. plexippus.
+
+```{r}
+# IC50 of each LAN, LSN, or VSN butterfly relative to D. plexippus VSH
+
+# VSH reference IC50: the D. plexippus (VSH) butterfly mean from Butterfly.IC50.summary
+VSH.IC50 = Butterfly.IC50.summary %>%
+  filter(ATPase_State == "VSH") %>% pull(IC50)
+
+IC50.relative.to.VSH = Butterfly.IC50.summary %>%
+  filter(ATPase_State %in% c("LAN", "LSN", "VSN")) %>%
+  mutate(
+    VSH_IC50 = VSH.IC50,
+    Fold_less_resistant_than_VSH = VSH_IC50 / IC50
+  ) %>%
+  dplyr::select(
+    Species, ATPase_State, IC50, VSH_IC50,
+    Fold_less_resistant_than_VSH
+  ) %>%
+  arrange(ATPase_State, Species)
+
+IC50.relative.to.VSH %>%
+  group_by(ATPase_State) %>%
+  summarise(
+    Min_fold = min(Fold_less_resistant_than_VSH),
+    Max_fold = max(Fold_less_resistant_than_VSH)
+  )
+```
+
+### 3.3.2 Engineered Drosophila
+
+For each engineered *D. melanogaster* NKA carrying the LAN, LSN, or VSN state, we calculated how many-fold less resistant it was than the engineered VSH NKA:
+
+$$
+\text{fold less resistant} =
+\frac{\text{VSH IC}_{50}}
+{\text{LAN, LSN, or VSN IC}_{50}}.
+$$
+
+Values greater than 1 indicate that the LAN, LSN, or VSN engineered NKA is less resistant to ouabain than the engineered VSH NKA.
+
+```{r}
+# IC50 of each engineered LAN, LSN, or VSN NKA relative to engineered VSH
+
+Drosophila.VSH.IC50 = Drosophila.IC50.summary %>%
+  filter(ATPase_State == "VSH") %>%
+  pull(Drosophila_IC50)
+
+Drosophila.IC50.relative.to.VSH = Drosophila.IC50.summary %>%
+  filter(ATPase_State %in% c("LAN", "LSN", "VSN")) %>%
+  mutate(
+    VSH_IC50 = Drosophila.VSH.IC50,
+    Fold_less_resistant_than_VSH = VSH_IC50 / Drosophila_IC50
+  ) %>%
+  dplyr::select(
+    Species, ATPase_State, Drosophila_IC50,
+    VSH_IC50, Fold_less_resistant_than_VSH
+  ) %>%
+  arrange(ATPase_State)
+
+Drosophila.IC50.relative.to.VSH
+```
