@@ -224,9 +224,66 @@ bars <- host_bars_for(tree_asr)
 milkweed_strip  <- bars[, "milkweed_use",  drop = FALSE]
 asclepias_strip <- bars[, "asclepias_use", drop = FALSE]
 
+# Butterfly higher classification for the clade labels. Genus is the first word of
+# each tip label; subtribe membership is set so each subtribe is monophyletic on this
+# tree (Danaina = Danaus + Tirumala; Amaurina = Amauris + Ideopsis + Parantica, which
+# form a clade here; Euploeina = Euploea + Idea; Itunina = the Neotropical Lycorea +
+# Anetia). Each label is placed at the MRCA of its tips via getMRCA(), so the
+# annotation tracks the tree after the low-support collapse and re-orientation rather
+# than relying on fixed node numbers.
+tip_genus <- sub(" .*", "", tree_asr$tip.label)
+subtribe_tips <- list(
+  Danaina   = tree_asr$tip.label[tip_genus %in% c("Danaus", "Tirumala")],
+  Amaurina  = tree_asr$tip.label[tip_genus %in% c("Amauris", "Ideopsis", "Parantica")],
+  Euploeina = tree_asr$tip.label[tip_genus %in% c("Euploea", "Idea")],
+  Itunina   = tree_asr$tip.label[tip_genus %in% c("Lycorea", "Anetia")]
+)
+# Genera placed at their own MRCA. Amauris is handled separately below: the
+# low-support collapse dissolved its crown into the Amaurina polytomy, so its MRCA
+# coincides with the Amaurina node and it has no single crown node to label.
+genus_tips <- list(
+  Danaus    = tree_asr$tip.label[tip_genus %in% "Danaus"],
+  Tirumala  = tree_asr$tip.label[tip_genus %in% "Tirumala"],
+  Parantica = tree_asr$tip.label[tip_genus %in% "Parantica"],
+  Ideopsis  = tree_asr$tip.label[tip_genus %in% "Ideopsis"],
+  Euploea   = tree_asr$tip.label[tip_genus %in% "Euploea"],
+  Idea      = tree_asr$tip.label[tip_genus %in% "Idea"]
+)
+df_node_labels <- dplyr::bind_rows(
+  tibble::tibble(
+    node       = vapply(subtribe_tips, function(t) ape::getMRCA(tree_asr, t), integer(1)),
+    clade      = names(subtribe_tips),
+    label_type = "subtribe"
+  ),
+  tibble::tibble(
+    node       = vapply(genus_tips, function(t) ape::getMRCA(tree_asr, t), integer(1)),
+    clade      = names(genus_tips),
+    label_type = "genus"
+  )
+)
+
 p <- ggtree(tree_asr, branch.length = "none", ladderize = FALSE,
-            size = 0.3, color = "grey40")
+            size = 0.3, color = "grey40") %<+% df_node_labels
 tree_xmax <- max(p$data$x, na.rm = TRUE)
+
+# Amauris genus label. Its crown collapsed into the Amaurina polytomy, so instead of a
+# single node we place the label between the two Amauris-only branches that descend
+# from that polytomy: vertically centred between them, and horizontally near where they
+# diverge from the polytomy node (biased left so it sits on the branches rather than
+# floating out toward the tips).
+amaurina_node <- ape::getMRCA(tree_asr, subtribe_tips$Amaurina)
+amaurina_kids <- tree_asr$edge[tree_asr$edge[, 1] == amaurina_node, 2]
+amauris_kids  <- Filter(function(k) {
+  kt <- if (k <= ape::Ntip(tree_asr)) tree_asr$tip.label[k]
+        else ape::extract.clade(tree_asr, k)$tip.label
+  all(sub(" .*", "", kt) == "Amauris")
+}, amaurina_kids)
+amaurina_x <- p$data$x[p$data$node == amaurina_node]
+amauris_label <- tibble::tibble(
+  x     = amaurina_x + 0.2 * (mean(p$data$x[p$data$node %in% amauris_kids]) - amaurina_x),
+  y     = mean(p$data$y[p$data$node %in% amauris_kids]),
+  clade = "Amauris"
+)
 
 # Both bars share one fill scale -> one combined legend
 p <- gheatmap(p, milkweed_strip, offset = 0.01, width = 0.04,
@@ -247,8 +304,30 @@ p <- gheatmap(p, asclepias_strip, offset = tree_xmax * 0.06, width = 0.04,
 
 p <- p +
   geom_tiplab(aes(label = abbr_tip(label)), offset = tree_xmax * 0.14,
-              size = 2.6, fontface = "italic", align = TRUE, linetype = 0) +
+              size = 3.1, fontface = "italic", align = TRUE, linetype = 0) +
   xlim_tree(tree_xmax + 6)
+
+# Butterfly clade labels on internal nodes, using the MRCA table attached above:
+# subtribes in bold (white fill) and genera in italic (grey98 fill). Styling matches
+# the earlier reconstruction; the subgenus layer is intentionally omitted.
+p <- p +
+  coord_cartesian(clip = "off") +
+  geom_label2(
+    aes(subset = !isTip & !is.na(clade) & label_type == "subtribe", label = clade),
+    size = 3.6, label.size = 0.22, label.padding = grid::unit(0.16, "lines"),
+    fill = "white", fontface = "bold", nudge_x = -0.85
+  ) +
+  geom_label2(
+    aes(subset = !isTip & !is.na(clade) & label_type == "genus", label = clade),
+    size = 3.6, label.size = 0.22, label.padding = grid::unit(0.16, "lines"),
+    fill = "grey98", fontface = "italic", nudge_x = -0.85
+  ) +
+  # Amauris, placed manually between its two branches (see above).
+  geom_label(
+    data = amauris_label, aes(x = x, y = y, label = clade), inherit.aes = FALSE,
+    size = 3.6, label.size = 0.22, label.padding = grid::unit(0.16, "lines"),
+    fill = "grey98", fontface = "italic"
+  )
 
 pies <- nodepie(asr_three, cols = c("none", "milkweed", "asclepias"), alpha = 1)
 pies <- lapply(pies, function(g)
@@ -256,9 +335,11 @@ pies <- lapply(pies, function(g)
 
 p_final <- inset(p, pies, width = 0.035, height = 0.035) +
   coord_cartesian(clip = "off") +
-  theme(legend.position = c(0.06, 0.96), legend.justification = c(0, 1),
+  theme(legend.position = c(0.02, 0.98), legend.justification = c(0, 1),
         legend.box = "vertical", legend.background = element_blank(),
-        legend.key.size = unit(0.35, "cm"))
+        legend.key.size = unit(0.4, "cm"),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10.5))
 
 p_final
 ggsave("../visuals/host_use_milkweed_asclepias_ASR.png",
