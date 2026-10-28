@@ -33,10 +33,6 @@ the same curated host-use data and the same butterfly tree):
      ultrafast-bootstrap trees of the Danaini backbone (phylogenetic uncertainty).
   4. **Jackknife** — each sequenced taxon dropped in turn (taxon sampling).
 
-The ATPase ouabain-resistance (IC₅₀) analysis lives in `../Figure2/`; the
-phylogenetic-signal (Fritz & Purvis D-statistic) analysis lives in
-`../Extended_Data_Figure2/`.
-
 ## Directory layout
 
 ```

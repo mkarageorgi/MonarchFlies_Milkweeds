@@ -10,8 +10,6 @@ directory at `code/` (all paths are relative to that folder):
   compares IC₅₀ values by ATPα state. Produces the supplementary IC₅₀ table and the
   IC₅₀-by-state figure.
 
-The host-use and ATPα ancestral state reconstructions now live in `../Figure1/`.
-
 ## Directory layout
 
 ```
