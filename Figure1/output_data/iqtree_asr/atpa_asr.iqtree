@@ -1,0 +1,160 @@
+IQ-TREE 3.1.4 built Sep 29 2026
+
+Input file name: ../output_data/iqtree_asr/atpa_alignment.fasta
+User tree file name: ../output_data/iqtree_asr/atpa_fixed_topology.treefile
+Type of analysis: tree reconstruction
+Random seed number: 173293
+
+REFERENCES
+----------
+
+To cite IQ-TREE 3 please use:
+
+Thomas K.F. Wong, Nhan Ly-Trong, Huaiyan Ren, Piyumal Demotte, Hector Banos,
+Andrew J. Roger, Edward Susko, Chris Bielow, Nicola De Maio, Nick Goldman,
+Matthew W. Hahn, Mario dos Reis, Le Sy Vinh, Gavin Huttley, Robert Lanfear, Bui Quang Minh (2026)
+IQ-TREE 3: Phylogenomic Inference Software using Complex Evolutionary Models.
+Molecular Biology and Evolution, msag117.
+https://doi.org/10.1093/molbev/msag117
+
+SEQUENCE ALIGNMENT
+------------------
+
+NOTE: Alignment sequence type is auto-detected. If in doubt, specify it via -st option.
+Input data: 19 sequences with 12 amino-acid sites
+Number of constant sites: 9 (= 75% of all sites)
+Number of invariant (constant or ambiguous constant) sites: 9 (= 75% of all sites)
+Number of parsimony informative sites: 3
+Number of distinct site patterns: 10
+
+SUBSTITUTION PROCESS
+--------------------
+
+Model of substitution: LG+G4
+
+State frequencies: (model)
+
+Model of rate heterogeneity: Gamma with 4 categories
+Gamma shape alpha: 0.6203
+
+ Category  Relative_rate  Proportion
+  1         0.0573         0.2500
+  2         0.3234         0.2500
+  3         0.8913         0.2500
+  4         2.7280         0.2500
+Relative rates are computed as MEAN of the portion of the Gamma distribution falling in the category.
+
+USER TREE
+---------
+
+Log-likelihood of the tree: -56.3229 (s.e. 10.9910)
+Unconstrained log-likelihood (without tree): -27.0463
+Number of free parameters (#branches + #model parameters): 36
+Akaike information criterion (AIC) score: 184.6458
+Corrected Akaike information criterion (AICc) score: 2848.6458
+Bayesian information criterion (BIC) score: 202.1024
+
+**************************** WARNING ****************************
+Number of parameters (K, model parameters and branch lengths): 36
+Sample size (n, alignment length): 12
+
+Given that K>=n, the parameter estimates might be inaccurate.
+Thus, phylogenetic estimates should be interpreted with caution.
+
+Ideally, it is desirable that n >> K. When selecting optimal models,
+1. use AIC or BIC if n > 40K;
+2. use AICc or BIC if 40K >= n > K;
+3. be extremely cautious if n <= K
+
+To improve the situation (3), consider the following options:
+  1. Increase the sample size (n)
+  2. Decrease the number of parameters (K) to be estimated. If
+     possible:
+     a. Remove the least important sequences from the alignment
+     b. Specify some of the parameter values for the substitution
+        model (e.g., the nucleotide or amino acid frequencies)
+     c. Specify some of the parameter values for the rates-across-
+        sites model (e.g., the shape parameter for the discrete
+        Gamma distribution, the proportion of invariable sites, or
+        the rates of change for different rate categories under
+        the FreeRate model)
+
+Reference:
+Burnham KR, Anderson DR (2002). Model Selection and Multimodel
+Inference: A Practical Information-Theoretic Approach. Springer,
+New York.
+************************ END OF WARNING ***********************
+
+Total tree length (sum of branch lengths): 0.3564
+Sum of internal branch lengths: 0.0888 (24.9134% of tree length)
+
+WARNING: 14 near-zero internal branches (<0.0833) should be treated with caution
+         Such branches are denoted by '**' in the figure below
+
+NOTE: Tree is UNROOTED although outgroup taxon 'Heliconius_erato' is drawn at root
+
+                          +**Amauris_tartarea
+                       +**| (Node4)
+                       |  |  +**Ideopsis_juventa
+                       |  +**| (Node5)
+                       |     +**Parantica_aglea
+                    +**| (Node3)
+                    |  |                             +**Danaus_melanippus
+                    |  |                          +**| (Node9)
+                    |  |                          |  +**Danaus_genutia
+                    |  |                       +**| (Node8)
+                    |  |                       |  |  +**Danaus_chrysippus
+                    |  |                       |  +**| (Node10)
+                    |  |                       |     +**Danaus_gilippus
+                    |  |                    +**| (Node7)
+                    |  |                    |  |                    +**Danaus_erippus
+                    |  |                    |  |                 +**| (Node12)
+                    |  |                    |  |                 |  +**Danaus_plexippus
+                    |  |                    |  +*****************| (Node11)
+                    |  |                    |                    +**Danaus_eresimus
+                    |  +--------------------| (Node6)
+                    |                       |     +**Tirumala_limniace
+                    |                       |  +**| (Node14)
+                    |                       |  |  +**Tirumala_petiverana
+                    |                       +**| (Node13)
+                    |                          +**Tirumala_septentrionis
++-------------------| (Node2)
+|                   |        +**Euploea_core
+|                   |     +**| (Root)
+|                   |     |  +**Euploea_mulciber
+|                   |  +**| (Node16)
+|                   |  |  +**Euploea_phaenareta
+|                   +**| (Node15)
+|                      +**Idea_leuconoe
+| (Node1)
++**Mechanitis_polymnia
+|
++--------------------Heliconius_erato
+
+Tree in newick format:
+
+((((Amauris_tartarea:0.0000022677,(Ideopsis_juventa:0.0000020550,Parantica_aglea:0.0000029085)Node5:0.0000027414)Node4:0.0000027097,((((Danaus_melanippus:0.0000020149,Danaus_genutia:0.0000021988)Node9:0.0000020863,(Danaus_chrysippus:0.0000025447,Danaus_gilippus:0.0000021446)Node10:0.0000020111)Node8:0.0000020436,((Danaus_erippus:0.0000023661,Danaus_plexippus:0.0000023247)Node12:0.0000021734,Danaus_eresimus:0.0000020180)Node11:0.0792157680)Node7:0.0000024720,((Tirumala_limniace:0.0000023100,Tirumala_petiverana:0.0000022688)Node14:0.0000028584,Tirumala_septentrionis:0.0000020234)Node13:0.0000028656)Node6:0.0952360824)Node3:0.0000023233,(((Euploea_core:0.0000022412,Euploea_mulciber:0.0000020364)Root:0.0000023187,Euploea_phaenareta:0.0000023199)Node16:0.0000021960,Idea_leuconoe:0.0000020893)Node15:0.0000023044)Node2:0.0887990899,Mechanitis_polymnia:0.0000020461,Heliconius_erato:0.0931180192)Node1;
+
+ALISIM COMMAND
+--------------
+To simulate an alignment of the same length as the original alignment, using the tree and model parameters estimated from this analysis, you can use the following command:
+
+--alisim simulated_MSA -t ../output_data/iqtree_asr/atpa_asr.treefile -m "LG+G4{0.620322}" --length 12
+
+To mimic the alignment used to produce this analysis, i.e. simulate an alignment of the same length as the original alignment, using the tree and model parameters estimated from this analysis *and* copying the same gap positions as the original alignment, you can use the following command:
+
+iqtree -s ../output_data/iqtree_asr/atpa_alignment.fasta --alisim mimicked_MSA
+
+To simulate any number of alignments in either of the two commandlines above, use the --num-alignments options, for example mimic 100 alignments you would use the command line:
+
+iqtree -s ../output_data/iqtree_asr/atpa_alignment.fasta --alisim mimicked_MSA --num-alignments 100
+
+For more information on using AliSim, please visit: www.iqtree.org/doc/AliSim
+
+TIME STAMP
+----------
+
+Date and time: Mon Oct 26 12:52:49 2026
+Total CPU time used: 23.3401 seconds (0h:0m:23s)
+Total wall-clock time used: 75.3155 seconds (0h:1m:15s)
+

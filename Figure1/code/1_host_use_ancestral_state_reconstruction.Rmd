@@ -23,8 +23,11 @@ Because the per-species states are already curated there, this notebook only joi
 them onto the tree and runs a **three-state** host-use reconstruction — `none` /
 milkweed clade (Asclepiadoideae & Secamonoideae) / native-range *Asclepias* — and
 draws the full-tree figure, mirroring the analysis previously in
-`Blanca_HOSTS_milkweed_asclepias_ASR.Rmd`. The ATPα-focused figure, which reuses the
-node probabilities written here, now lives in `../../Figure2/`.
+`Blanca_HOSTS_milkweed_asclepias_ASR.Rmd`. The figure also carries an inner **ATPα
+tip strip** (the curated per-species ATPα genotype, with unsequenced taxa shown as
+"Unknown"), so host use and the ATPα functional state can be read side by side; the
+ATPα-focused figure, which reuses the node probabilities written here, lives in
+`../../Figure2/`.
 
 Before reconstructing, internal branches with bootstrap support below
 `SUPPORT_CUTOFF` (70) are collapsed into polytomies, so the reconstruction does not
@@ -80,6 +83,13 @@ collapse_low_support <- function(phy, cutoff = SUPPORT_CUTOFF) {
 full_palette <- c("none" = "grey90", "milkweed" = "#d7c0dd",
                   "asclepias" = "#65338f")
 two_palette  <- c("none" = "grey90", "asclepias" = "#65338f")
+# ATPα tip-strip palette and level order (matches Extended Data Fig. 1 / Figure 2,
+# where QAN is the Heliconius genotype). Unsequenced tips are coded "Unknown" and
+# share the grey of the "none" host-use state.
+atpa_palette <- c("VSH" = "#ed1c2c", "VSN" = "#f36f21", "LSN" = "#fec12b",
+                  "LAN" = "#3a6a9e", "QAN" = "grey30",
+                  "Unknown" = unname(full_palette[["none"]]))
+atpa_levels  <- c("VSH", "VSN", "LSN", "LAN", "QAN", "Unknown")
 ```
 
 # 2. Read the tree and the per-species host-use states
@@ -144,7 +154,7 @@ cat("Tips coded 'none' because absent from the states table:",
           collapse = ", "), "\n")
 ```
 
-# 3. Host-use tip-bar helper
+# 3. Tip-strip helpers (host-use bars + ATPα strip)
 
 ```{r helpers}
 # Two host-use bars (milkweed-clade use, native-Asclepias use) on the shared
@@ -159,6 +169,24 @@ host_bars_for <- function(tree_f) {
       asclepias_use = factor(if_else(has_asclepias_native, "asclepias", "none"),
                              levels = c("none", "milkweed", "asclepias"))
     ) %>%
+    column_to_rownames("butterfly_species") %>%
+    { .[tree_f$tip.label, , drop = FALSE] }
+}
+
+# Species with a sequenced ATPα genotype (everything else stays unknown -> grey).
+atpa_known_species <- states_raw %>%
+  transmute(butterfly_species,
+            atpa_state = dplyr::na_if(str_squish(atpa_state), "")) %>%
+  filter(!is.na(atpa_state), atpa_state != "unknown")
+
+# Inner ATPα strip (rownames = tips) for any (sub)tree; tips with no sequenced
+# genotype are coded "Unknown" (drawn in the "none" grey), so the strip reads as
+# continuous grey wherever a genotype is unknown.
+atpa_strip_for <- function(tree_f) {
+  tibble(butterfly_species = tree_f$tip.label) %>%
+    left_join(atpa_known_species, by = "butterfly_species") %>%
+    mutate(atpa_state = factor(tidyr::replace_na(atpa_state, "Unknown"),
+                               levels = atpa_levels)) %>%
     column_to_rownames("butterfly_species") %>%
     { .[tree_f$tip.label, , drop = FALSE] }
 }
@@ -213,16 +241,18 @@ write.csv(asr_out,
 head(asr_out)
 ```
 
-# 5. Full three-state figure (two tip bars + node pies)
+# 5. Full three-state figure (ATPα strip + two tip bars + node pies)
 
-A cladogram with two vertical tip bars sharing one combined legend — an inner bar
-for milkweed-clade use and an outer bar for native *Asclepias* use — and
-three-state ancestral pies on every internal node.
+A cladogram with an inner ATPα-state strip (its own legend), two vertical host-use
+tip bars sharing one combined legend — a middle bar for milkweed-clade use and an
+outer bar for native *Asclepias* use — and three-state host-use ancestral pies on
+every internal node.
 
 ```{r figure-three, fig.width=10, fig.height=13}
 bars <- host_bars_for(tree_asr)
 milkweed_strip  <- bars[, "milkweed_use",  drop = FALSE]
 asclepias_strip <- bars[, "asclepias_use", drop = FALSE]
+atpa_strip      <- atpa_strip_for(tree_asr)
 
 # Butterfly higher classification for the clade labels. Genus is the first word of
 # each tip label; subtribe membership is set so each subtribe is monophyletic on this
@@ -285,25 +315,35 @@ amauris_label <- tibble::tibble(
   clade = "Amauris"
 )
 
-# Both bars share one fill scale -> one combined legend
-p <- gheatmap(p, milkweed_strip, offset = 0.01, width = 0.04,
+# Inner strip: ATPα state (its own legend). Tips with no sequenced genotype are
+# "Unknown" (grey). Offsets place the ATPα strip innermost, then the two host-use
+# bars, then the tip labels.
+p <- gheatmap(p, atpa_strip, offset = 0.01, width = 0.028,
+              colnames = FALSE, color = NA) +
+  scale_fill_manual(name = expression("ATP" * alpha * " state"),
+                    values = atpa_palette, breaks = atpa_levels, drop = FALSE) +
+  guides(fill = guide_legend(order = 2)) +
+  ggnewscale::new_scale_fill()
+
+# Both host-use bars share one fill scale -> one combined legend
+p <- gheatmap(p, milkweed_strip, offset = tree_xmax * 0.04, width = 0.028,
               colnames = FALSE, color = NA)
-p <- gheatmap(p, asclepias_strip, offset = tree_xmax * 0.06, width = 0.04,
+p <- gheatmap(p, asclepias_strip, offset = tree_xmax * 0.075, width = 0.028,
               colnames = FALSE, color = NA) +
   scale_fill_manual(
     name   = "Host use",
     values = full_palette,
     breaks = c("asclepias", "milkweed", "none"),
     labels = c(expression(paste(italic("Asclepias"), " (native range)")),
-               expression("Asclepiadoideae & Secamonoideae"),
-               expression("Non-milkweed")),
+               expression("Asclepiadoideae and Secamonoideae"),
+               expression("non-Asclepiadoideae and Secamonoideae")),
     drop   = FALSE
   ) +
   guides(fill = guide_legend(order = 1)) +
   ggnewscale::new_scale_fill()
 
 p <- p +
-  geom_tiplab(aes(label = abbr_tip(label)), offset = tree_xmax * 0.14,
+  geom_tiplab(aes(label = abbr_tip(label)), offset = tree_xmax * 0.135,
               size = 3.1, fontface = "italic", align = TRUE, linetype = 0) +
   xlim_tree(tree_xmax + 6)
 
@@ -335,11 +375,12 @@ pies <- lapply(pies, function(g)
 
 p_final <- inset(p, pies, width = 0.035, height = 0.035) +
   coord_cartesian(clip = "off") +
-  theme(legend.position = c(0.02, 0.98), legend.justification = c(0, 1),
+  theme(legend.position = c(0.02, 1.0), legend.justification = c(0, 1),
         legend.box = "vertical", legend.background = element_blank(),
         legend.key.size = unit(0.4, "cm"),
         legend.title = element_text(size = 12),
-        legend.text = element_text(size = 10.5))
+        legend.text = element_text(size = 10.5),
+        plot.margin = margin(t = 22, r = 5, b = 5, l = 5))
 
 p_final
 ggsave("../visuals/host_use_milkweed_asclepias_ASR.png",
