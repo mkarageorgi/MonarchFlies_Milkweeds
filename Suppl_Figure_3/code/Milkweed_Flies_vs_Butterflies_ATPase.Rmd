@@ -64,6 +64,7 @@ We then calculated the following three comparisons:
 
 ```{r}
 library(tidyverse)
+library(readxl)
 ```
 
 ## 1.1 Petschenka et al. 2013: Na+/K+ ATPase data from milkweed butterflies
@@ -97,11 +98,11 @@ $$
 \times 100
 $$
 
-The photometric measurements reported in Petschenka et al. (2013), *Stepwise evolution of resistance to toxic cardenolides via genetic substitutions in the Na⁺/K⁺-ATPase of milkweed butterflies*, were first transcribed into the file `Petschenka2013_NaKATPase_raw_absorbance.csv` (in `../input_data/`).
+The photometric measurements reported in `NaKATPase_Petschenkaetal.pdf` were first transcribed into the file `Petschenka2013_NaKATPase_raw_absorbance.csv`.
 
 ```{r}
 # Read the raw absorbance data
-butterfly.raw = read.csv("../input_data/Petschenka2013_NaKATPase_raw_absorbance.csv") %>%
+butterfly.raw = read.csv("./Data/Petschenka2013_NaKATPase_raw_absorbance.csv") %>%
   rename(Reaction_Conditions = Dose, Technical_Replicate = Replicate) %>%
   filter(
     !(Species_ATPase == "genutia_5" &
@@ -195,12 +196,10 @@ The published source data report Na⁺/K⁺-ATPase activity at each ouabain conc
 -   **Level 2:** 4–7 assay plates per ATPase preparation, representing technical replication.
 
 ```{r}
-# Fig. 3a source data from Karageorgi et al. (2019), converted from the published
-# Excel supplement (sheet "Fig3a", cells A3:H82) to CSV. Read as text so the block
-# layout — ATPase name, "plate N" headers, and "*"-flagged exclusions — is preserved.
-Karageorgi.raw = read.csv(
-  "../input_data/Karageorgi2019_Fig3a_NaKATPase_activity.csv",
-  colClasses = "character"
+Karageorgi.raw = read_excel(
+  "./Data/41586_2019_1610_MOESM5_ESM.xlsx",
+  sheet = "Fig3a", range = "A3:H82",
+  col_names = FALSE, col_types = "text"
 )
 
 # Convert each ATPase block to long format
@@ -334,7 +333,7 @@ IC50.replicates
 
 ```{r}
 library(openxlsx)
-openxlsx::write.xlsx(IC50.replicates,"../output_data/Supplementary_Table_ATPase_IC50_replicates.xlsx", overwrite = TRUE)
+openxlsx::write.xlsx(IC50.replicates,"./Supplementary_Table_ATPase_IC50_replicates.xlsx", overwrite = TRUE)
 ```
 
 # 3. IC50s comparison and plotting
@@ -443,54 +442,64 @@ IC50.state.summary = Butterfly.IC50.matched %>%
 ```
 
 ```{r}
+
 ATPase.colors = c(QAN = "#737373", LAN = "#3a6a9e", LSN = "#fec12b",
                   VSN = "#f36f21", VSH = "#ed1c2c")
 
 IC50.state.plot = ggplot() +
 
-  # Connect each butterfly-state mean to the matched engineered Drosophila value
+  # Connect butterfly-state means to engineered Drosophila
   geom_segment(data = IC50.state.summary,
                aes(x = Butterfly_State_IC50, xend = Drosophila_IC50,
                    y = ATPase_State, yend = ATPase_State),
                linewidth = 0.7, color = "black") +
 
-  # Mean IC50 for each butterfly species
+  # Individual butterfly species means
   geom_point(data = Butterfly.IC50.summary,
              aes(x = IC50, y = ATPase_State, color = ATPase_State),
              position = position_jitter(width = 0, height = 0.05),
              shape = 16, size = 2, alpha = 0.3, show.legend = FALSE) +
 
-  # Mean IC50 across butterfly species within each ATPα state
+  # Butterfly-state means
   geom_point(data = IC50.state.summary,
              aes(x = Butterfly_State_IC50, y = ATPase_State, color = ATPase_State),
-             shape = 16, size = 4, alpha = 1, show.legend = FALSE) +
+             shape = 16, size = 4, show.legend = FALSE) +
 
-  # Engineered Drosophila genotypes, including the unmatched QAN state
+  # Engineered Drosophila genotypes
   geom_point(data = Drosophila.IC50.summary,
              aes(x = Drosophila_IC50, y = ATPase_State, color = ATPase_State),
-             shape = 15, size = 4, alpha = 0.8, show.legend = FALSE) +
+             shape = 15, size = 4, alpha = 0.8,
+             show.legend = TRUE, key_glyph = "path") +
 
-  # Range of engineered Drosophila / butterfly-species fold differences
+  # Fold differences
   geom_text(data = IC50.state.summary,
             aes(x = Label_x, y = ATPase_State, label = Range_Label),
             vjust = -1, size = 3.5, color = "black") +
 
- scale_x_log10(
-  breaks = 10^(-7:-4),
-  labels = scales::parse_format()(paste0("10^", -7:-4))) +
-coord_cartesian(xlim = c(1e-7, 1.2e-4))+
+  scale_x_log10(breaks = 10^(-7:-4),
+                labels = scales::parse_format()(paste0("10^", -7:-4))) +
+  coord_cartesian(xlim = c(1e-7, 1.2e-4)) +
   scale_y_discrete(drop = FALSE) +
-  scale_color_manual(values = ATPase.colors) +
+  scale_color_manual(values = ATPase.colors, limits = names(ATPase.colors),
+                     drop = FALSE, name = expression("ATP" * alpha * " state")) +
+  guides(color = guide_legend(
+    override.aes = list(linewidth = 2, linetype = 1, alpha = 1)
+  )) +
 
   labs(x = expression(IC[50] * ", ouabain concentration causing 50% inhibition [M]"),
        y = expression("ATP" * alpha * " state")) +
-
   theme_classic() +
-  theme(legend.position = "none")
+  theme(legend.position = "right",
+        legend.title = element_text(size = 13),
+        legend.text = element_text(size = 12),
+        axis.title.x = element_text(size = 13),
+        axis.title.y = element_text(size = 13),
+        axis.text = element_text(size = 12))
 
 IC50.state.plot
 
-ggsave("../visuals/IC50_by_ATPase_state_means.png", IC50.state.plot, width = 8, height = 5, dpi = 300)
+ggsave("./Plots/IC50_by_ATPase_state_means.png",
+       IC50.state.plot, width = 8, height = 5, dpi = 300)
 ```
 
 **Supplementary Figure 3. Engineering into *D. melanogaster* ATPα the substitutions at positions 111, 119, and 122 observed in milkweed butterflies and an outgroup largely recapitulates the ouabain resistance of the corresponding butterfly ATPases.** Ouabain IC₅₀ values are shown for Na⁺/K⁺-ATPases from Danaini butterflies, the outgroup *Mechanitis polymnia*, and engineered *Drosophila melanogaster* lines carrying the QAN, LAN, LSN, VSN, and VSH ATPα states. Butterfly species carrying each state were *M. polymnia* (LAN); *Amauris tartarea*, *Euploea core*, *E. mulciber*, *E. phaenareta*, *Ideopsis juventa*, *Idea leuconoe*, *Lycorea halia*, and *Parantica aglea* (LSN); *Danaus chrysippus*, *D. genutia*, *Tirumala limniace*, *T. petiverana*, and *T. septentrionis* (VSN); and *Danaus plexippus* (VSH). Data are from Petschenka et al. (2013) and Karageorgi et al. (2019). Pale circles represent the mean IC₅₀ across biological preparations for each butterfly species, and the larger solid circle represents the mean of these species-level estimates within each ATPα state. Squares show the IC₅₀ of the corresponding engineered *D. melanogaster* genotype. Labels indicate the range of fold differences across butterfly species, calculated as the engineered-*Drosophila* IC₅₀ divided by the butterfly-species IC₅₀. The engineered QAN *D. melanogaster* genotype is shown as an unmatched ouabain-sensitive reference. Ouabain IC₅₀ values were estimated by fitting a four-parameter log-logistic dose–response model separately to each biological ATPase preparation from each butterfly species and engineered *D. melanogaster* ATPα knock-in line (See Supplementary Table).
@@ -510,29 +519,26 @@ $$
 Values below 1 indicate that the LAN, LSN, or VSN butterfly ATPase is less resistant to ouabain than the VSH ATPase of D. plexippus.
 
 ```{r}
-# IC50 of each LAN, LSN, or VSN butterfly relative to D. plexippus VSH
+VSH.IC50 <- Butterfly.IC50.summary %>%
+  filter(ATPase_State == "VSH") %>%
+  pull(IC50)
 
-# VSH reference IC50: the D. plexippus (VSH) butterfly mean from Butterfly.IC50.summary
-VSH.IC50 = Butterfly.IC50.summary %>%
-  filter(ATPase_State == "VSH") %>% pull(IC50)
-
-IC50.relative.to.VSH = Butterfly.IC50.summary %>%
+# Calculate fold differences relative to VSH
+IC50.relative.to.VSH <- Butterfly.IC50.summary %>%
   filter(ATPase_State %in% c("LAN", "LSN", "VSN")) %>%
   mutate(
     VSH_IC50 = VSH.IC50,
     Fold_less_resistant_than_VSH = VSH_IC50 / IC50
   ) %>%
-  dplyr::select(
-    Species, ATPase_State, IC50, VSH_IC50,
-    Fold_less_resistant_than_VSH
-  ) %>%
   arrange(ATPase_State, Species)
 
+# Summarize by ATPase state
 IC50.relative.to.VSH %>%
   group_by(ATPase_State) %>%
   summarise(
     Min_fold = min(Fold_less_resistant_than_VSH),
-    Max_fold = max(Fold_less_resistant_than_VSH)
+    Max_fold = max(Fold_less_resistant_than_VSH),
+    .groups = "drop"
   )
 ```
 
