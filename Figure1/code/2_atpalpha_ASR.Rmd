@@ -506,7 +506,7 @@ and the frequency with which its reconstructed state matched the reference
 reconstruction (state consistency).
 
 ```{r bootstrap}
-boot_file <- paste0("../../Extended_Data_Figure1/output_data/danaini_tree/",
+boot_file <- paste0("../../Supplementary_Figure_1/output_data/danaini_tree/",
                     "supermatrix_ge1/supermatrix_ge1.ufboot")
 stopifnot(file.exists(boot_file))
 

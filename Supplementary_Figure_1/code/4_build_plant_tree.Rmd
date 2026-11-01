@@ -1,5 +1,5 @@
 ---
-title: "Extended Data Fig 1 (4/6): Build the Apocynaceae + Moraceae plant tree"
+title: "Supplementary Fig 1 (4/6): Build the Apocynaceae + Moraceae plant tree"
 author: "Marianna Karageorgi"
 date: "2026-10-22"
 output: html_document
@@ -7,7 +7,7 @@ output: html_document
 
 # 1. Overview
 
-Extended Data Fig 1 presents host use across Danaini as a butterfly species by
+Supplementary Fig 1 presents host use across Danaini as a butterfly species by
 plant genus matrix, aligned to a butterfly phylogeny on one axis and a plant
 phylogeny on the other. The butterfly phylogeny is built first, in notebooks 1–3
 (Danaini tree generation); the figure itself is assembled in notebooks 4–6:

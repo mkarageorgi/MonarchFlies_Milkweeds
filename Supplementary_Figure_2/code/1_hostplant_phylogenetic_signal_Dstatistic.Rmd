@@ -1,5 +1,5 @@
 ---
-title: "Extended Data Figure 2: Phylogenetic signal in host use (Fritz & Purvis D-statistic)"
+title: "Supplementary Figure 2: Phylogenetic signal in host use (Fritz & Purvis D-statistic)"
 author: "Naama Weksler"
 date: "2026-10-23"
 output: html_document
@@ -15,7 +15,7 @@ so the signal test and the reconstruction rest on the same tree and host-use dat
 
 - `../input_data/Danaini_in_HOSTS.newick` — the Danaini species tree.
 - `../input_data/Ext_fig1_host_associations.csv` — the butterfly-species ×
-  plant-genus associations from Extended Data Fig. 1, carrying each association's
+  plant-genus associations from Supplementary Fig. 1, carrying each association's
   plant subfamily and family. Every row is a documented (present) association.
 
 The headline test is **milkweed-clade** host use (Sections 3–5). Section 7 repeats
@@ -69,8 +69,8 @@ tree0$node.label <- NULL
 n_zero <- sum(tree0$edge.length == 0)
 tree0$edge.length[tree0$edge.length == 0] <- 1e-8
 
-# (iii) orient the tree to the curated reference order (shared with Extended Data
-# Fig. 1 / Figure 2 and the ASR notebook) so the trait-on-tree figures match that
+# (iii) orient the tree to the curated reference order (shared with Supplementary
+# Fig. 1 / Figure 1 and the ASR notebook) so the trait-on-tree figures match that
 # orientation. Rotation changes only the display, not the D-statistic (which is
 # order-independent) or the topology. Heliconius erato is absent from the reference
 # tree, so it is placed at the base with the other outgroups.
@@ -226,7 +226,7 @@ ggsave("../visuals/hostplant_phylo_signal_trait_tree.png",
   and is not appropriate here.
 
 - **Source consistency with the reconstruction.** The trait is built from the same
-  Extended Data Fig. 1 association table that underlies the ancestral state
+  Supplementary Fig. 1 association table that underlies the ancestral state
   reconstruction, so the two analyses are directly comparable. Because that table
   applies Figure 1's native-range *Asclepias* rule, a species whose only milkweed
   record is a non-native *Asclepias* association is coded `0` here, matching the
@@ -432,6 +432,12 @@ signal_summary <- tibble::tribble(
     `P(D=1)_BH` = p.adjust(`P(D=1)`, method = "BH"),
     `P(D=0)_BH` = p.adjust(`P(D=0)`, method = "BH")
   ) %>%
+  # BH correction runs on the numeric p-values above; only the final display is
+  # formatted. A permutation p-value of 0 means < 1/1000 (none of the 1000
+  # permutations was as extreme as the observed D), so render those cells as
+  # "<0.001" rather than a literal 0.
+  mutate(across(c(`P(D=1)`, `P(D=1)_BH`, `P(D=0)`, `P(D=0)_BH`),
+                ~ ifelse(.x == 0, "<0.001", as.character(.x)))) %>%
   dplyr::select(host_group, n_present, D,
                 `P(D=1)`, `P(D=1)_BH`, `P(D=0)`, `P(D=0)_BH`)
 

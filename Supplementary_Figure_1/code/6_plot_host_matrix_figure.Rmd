@@ -1,5 +1,5 @@
 ---
-title: "Extended Data Fig 1 (6/6): Plot the host-use matrix figure"
+title: "Supplementary Fig 1 (6/6): Plot the host-use matrix figure"
 author: "Naama Weksler"
 date: "2026-10-22"
 output: html_document
@@ -7,7 +7,7 @@ output: html_document
 
 # 1. Overview
 
-This is the sixth and last of six notebooks for Extended Data Fig 1 (see
+This is the sixth and last of six notebooks for Supplementary Fig 1 (see
 `4_build_plant_tree.Rmd` and `5_build_host_matrix.Rmd`). It assembles the figure
 from the prepared trees and tables and performs no further data processing.
 
@@ -81,7 +81,7 @@ plant_tree_full <- read.tree(
 
 The Danaini tree is rotated to the tip orientation used in the ancestral-state
 reconstruction figures (`Figure_2/code/Blanca_HOSTS_milkweed_asclepias_ASR.Rmd`),
-so that Extended Data Fig 1 and Figure 2 present species in the same vertical
+so that Supplementary Fig 1 and Figure 1 present species in the same vertical
 order. The reference order is taken from the species tree used there
 (`danaini_reference_order.newick`); rotation only reorders the display and leaves
 topology and branch lengths unchanged. Species absent from the reference (the

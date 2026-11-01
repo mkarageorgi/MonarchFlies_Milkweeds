@@ -1,5 +1,5 @@
 ---
-title: "Extended Data Fig 1 (5/6): Build the host-use matrix from HOSTS"
+title: "Supplementary Fig 1 (5/6): Build the host-use matrix from HOSTS"
 author: "Naama Weksler & Marianna Karageorgi"
 date: "2026-10-22"
 output: html_document
@@ -7,7 +7,7 @@ output: html_document
 
 # 1. Overview
 
-This is the fifth of six notebooks for Extended Data Fig 1 (see
+This is the fifth of six notebooks for Supplementary Fig 1 (see
 `4_build_plant_tree.Rmd`). It converts the **HOSTS** host-record dataset into the
 butterfly species by plant genus associations shown in the figure and writes
 them, together with the per-genus and per-species annotations, to
@@ -15,7 +15,7 @@ them, together with the per-genus and per-species annotations, to
 
 The record cleaning and plant-taxonomy standardization follow the pipeline of
 `Figure_2/code/Blanca_HOSTS_milkweed_asclepias_ASR.Rmd`, ensuring that Extended
-Data Fig 1 and Figure 2 rest on the same curated set of associations. The
+Data Fig 1 and Figure 1 rest on the same curated set of associations. The
 procedure comprises the following steps:
 
 1. The HOSTS Danainae export is read, quality-filtered, and standardized to a
@@ -340,7 +340,7 @@ the butterfly's **sole** evidence for the milkweed clade or its **sole** evidenc
 for *Asclepias* -- i.e. only then does keeping or dropping it change whether the
 butterfly is scored as a milkweed / *Asclepias* user. Per-butterfly evidence
 counts are taken over the full association set (a non-native *Asclepias* record
-still counts as milkweed-clade evidence, matching Figure 2's coding), while a
+still counts as milkweed-clade evidence, matching Figure 1's coding), while a
 non-native *Asclepias* record is excluded from the "must-validate" set because
 the native-range filter (Section 8) removes it before it can be plotted.
 
@@ -489,7 +489,7 @@ write.csv(
 # 10. Butterfly ATPα annotations
 
 The ATPα state of each butterfly species is drawn from
-Karageorgi et al. (2019), the same source used for Figure 2. Only resolved
+Karageorgi et al. (2019), the same source used for Figure 1. Only resolved
 states are retained; species without a resolved state are rendered as "unknown"
 in the figure. 
 
@@ -530,7 +530,7 @@ produced here, so the reconstruction can read it directly instead of rebuilding
 the associations from the raw records. Each species' ATPα state (Section 10) is
 appended as a final column; species without a resolved ATPα state are left `NA`.
 
-The states follow Figure 2's coding exactly and are therefore derived from the
+The states follow Figure 1's coding exactly and are therefore derived from the
 **full integrated association set** (`associations`), *before* the figure-specific
 filters of Section 8. In particular, a non-native *Asclepias* record still counts
 as use of the Asclepiadoideae/Secamonoideae clade here, whereas it is dropped from

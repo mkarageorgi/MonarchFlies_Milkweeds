@@ -1028,7 +1028,7 @@ ggsave("./plots/combined_plot.pdf",
        width = 10, height = 4.5)
 ```
 
-### Extended Data Figure 2
+### Supplementary Figure 2
 
 ```{r}
 plot_ed2

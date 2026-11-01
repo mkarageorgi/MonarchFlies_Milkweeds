@@ -1,6 +1,6 @@
 # Supplementary Figure 3 — Na⁺/K⁺-ATPase ouabain resistance (IC₅₀)
 
-Code and data for Figure 2. A single notebook in `code/`, run with the working
+Code and data for Supplementary Figure 3. A single notebook in `code/`, run with the working
 directory at `code/` (all paths are relative to that folder):
 
 - **`1_butterfly_vs_fly_IC50s.Rmd`** — ouabain IC₅₀ dose–response analysis comparing
@@ -13,7 +13,7 @@ directory at `code/` (all paths are relative to that folder):
 ## Directory layout
 
 ```
-Figure2/
+Supplementary_Figure_3/
 ├── README.md
 ├── code/
 │   └── 1_butterfly_vs_fly_IC50s.Rmd
@@ -29,7 +29,7 @@ Figure2/
 ## Running
 
 ```r
-setwd("<path>/Figure2/code")
+setwd("<path>/Supplementary_Figure_3/code")
 rmarkdown::render("1_butterfly_vs_fly_IC50s.Rmd")
 ```
 

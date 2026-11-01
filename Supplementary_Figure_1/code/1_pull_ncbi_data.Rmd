@@ -55,7 +55,7 @@ suppressPackageStartupMessages({
 if (!file.exists("helpers/ncbi_retrieval.R")) {
   stop("Can't find helpers/ — set the working directory to code/ first.\n",
        "  Current getwd(): ", getwd(), "\n",
-       '  Run: setwd("<path>/Extended_Data_Figure1/code")  (or restart the R terminal there)')
+       '  Run: setwd("<path>/Supplementary_Figure_1/code")  (or restart the R terminal there)')
 }
 source("helpers/ncbi_retrieval.R")
 

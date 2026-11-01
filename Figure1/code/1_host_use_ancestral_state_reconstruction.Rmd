@@ -8,14 +8,14 @@ output: html_document
 # 1. Overview
 
 This notebook reconstructs the ancestral host use of Danaini along the butterfly
-phylogeny. It consumes two prepared inputs from Extended Data Figure 1 and does no
+phylogeny. It consumes two prepared inputs from Supplementary Figure 1 and does no
 raw-record processing of its own:
 
 - `../input_data/Danaini_in_HOSTS.newick` — the Danaini species tree (tips are the
   species in the curated HOSTS dataset, including the outgroups *Mechanitis
   polymnia* and *Heliconius erato*).
 - `../input_data/danaini_host_use_states.csv` — one host-use state per species,
-  produced by Extended Data Fig. 1 (`5_build_host_matrix.Rmd`): the native-range
+  produced by Supplementary Fig. 1 (`5_build_host_matrix.Rmd`): the native-range
   *Asclepias* flag, the broader milkweed-clade flag, the host-use state coding, and
   each species' ATPα genotype.
 
@@ -27,7 +27,7 @@ draws the full-tree figure, mirroring the analysis previously in
 tip strip** (the curated per-species ATPα genotype, with unsequenced taxa shown as
 "Unknown"), so host use and the ATPα functional state can be read side by side; the
 ATPα-focused figure, which reuses the node probabilities written here, lives in
-`../../Figure2/`.
+`2_atpalpha_ASR.Rmd` (this folder).
 
 Before reconstructing, internal branches with bootstrap support below
 `SUPPORT_CUTOFF` (70) are collapsed into polytomies, so the reconstruction does not
@@ -83,7 +83,7 @@ collapse_low_support <- function(phy, cutoff = SUPPORT_CUTOFF) {
 full_palette <- c("none" = "grey90", "milkweed" = "#d7c0dd",
                   "asclepias" = "#65338f")
 two_palette  <- c("none" = "grey90", "asclepias" = "#65338f")
-# ATPα tip-strip palette and level order (matches Extended Data Fig. 1 / Figure 2,
+# ATPα tip-strip palette and level order (matches Supplementary Fig. 1 / Figure 1,
 # where QAN is the Heliconius genotype). Unsequenced tips are coded "Unknown" and
 # share the grey of the "none" host-use state.
 atpa_palette <- c("VSH" = "#ed1c2c", "VSN" = "#f36f21", "LSN" = "#fec12b",
@@ -113,7 +113,7 @@ cat("Collapsed", n_nodes_before - tree_asr$Nnode,
     tree_asr$Nnode, "of", n_nodes_before, "internal nodes remain.\n")
 
 # Orient the tree to the curated reference order used by the earlier reconstruction
-# (and by Extended Data Fig. 1 / Figure 2) rather than ladderizing: rotate internal
+# (and by Supplementary Fig. 1 / Figure 1) rather than ladderizing: rotate internal
 # nodes so the tips read top-to-bottom in that order. Rotation changes only the
 # display, not the topology or branch lengths. Heliconius erato is absent from the
 # reference tree, so it is placed at the base alongside the other outgroups.

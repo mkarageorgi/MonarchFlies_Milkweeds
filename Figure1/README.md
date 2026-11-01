@@ -6,8 +6,8 @@ with the maximum-likelihood ancestral reconstruction of the ATPα functional
 genotype across the same tree.
 
 Two notebooks in `code/`, run with the working directory at `code/` (all paths are
-relative to that folder), built on prepared inputs carried over from Extended Data
-Figure 1 (so Figure 1, Extended Data Fig. 1, and Extended Data Fig. 2 all rest on
+relative to that folder), built on prepared inputs carried over from Supplementary
+Figure 1 (so Figure 1, Supplementary Fig. 1, and Supplementary Fig. 2 all rest on
 the same curated host-use data and the same butterfly tree):
 
 - **`code/1_host_use_ancestral_state_reconstruction.Rmd`** — a three-state host-use
@@ -42,9 +42,9 @@ Figure1/
 │   ├── 1_host_use_ancestral_state_reconstruction.Rmd
 │   └── 2_atpalpha_ASR.Rmd
 ├── input_data/
-│   ├── Danaini_in_HOSTS.newick          # Danaini species tree (from Extended Data Fig. 1)
-│   ├── danaini_reference_order.newick   # curated tip order shared with Ext. Fig. 1 / Figure 2
-│   ├── danaini_host_use_states.csv      # per-species host-use states + ATPα (from Ext. Fig. 1 notebook 5)
+│   ├── Danaini_in_HOSTS.newick          # Danaini species tree (from Supplementary Fig. 1)
+│   ├── danaini_reference_order.newick   # curated tip order shared with Supplementary Fig. 1 / Figure 1
+│   ├── danaini_host_use_states.csv      # per-species host-use states + ATPα (from Supplementary Fig. 1 notebook 5)
 │   └── alignment.fasta                  # ATPα functional-motif alignment (incl. 4 congener/subspecies-sourced tips)
 ├── output_data/
 │   ├── host_use_milkweed_asclepias_ASR_node_probabilities.csv   # (notebook 1) 3-state ASR node probabilities
@@ -62,9 +62,9 @@ Figure1/
     └── atpalpha_ASR_jackknife.png                   # (notebook 2, §4) jackknife state stability
 ```
 
-## Inputs (prepared in Extended Data Figure 1)
+## Inputs (prepared in Supplementary Figure 1)
 
-The three host-use input files are copied from `../Extended_Data_Figure1/`:
+The three host-use input files are copied from `../Supplementary_Figure_1/`:
 
 - **`Danaini_in_HOSTS.newick`** — the filtered Danaini ML tree, including the
   outgroups *Mechanitis polymnia* and *Heliconius erato*.
@@ -72,7 +72,7 @@ The three host-use input files are copied from `../Extended_Data_Figure1/`:
   native-range *Asclepias* flag, the milkweed-clade flag, the collapsed state
   coding, and the ATPα genotype).
 - **`danaini_reference_order.newick`** — the curated tip order (shared with
-  Extended Data Fig. 1 and Figure 2); notebook 1 rotates the tree to this order so
+  Supplementary Fig. 1 and Figure 1); notebook 1 rotates the tree to this order so
   the figures match the orientation used elsewhere.
 - **`alignment.fasta`** — the ATPα functional-motif alignment used by notebook 2.
 
@@ -93,7 +93,7 @@ worse fit and, because its equal rates imply a uniform equilibrium, inflates the
 via `system2()`; set the `IQTREE_BIN` environment variable to your binary, otherwise
 it defaults to `/opt/anaconda3/envs/danaini-phylo/bin/iqtree` and falls back to
 `iqtree`/`iqtree2`/`iqtree3` on `PATH`. The bootstrap section reads
-`../../Extended_Data_Figure1/output_data/danaini_tree/supermatrix_ge1/supermatrix_ge1.ufboot`.
+`../../Supplementary_Figure_1/output_data/danaini_tree/supermatrix_ge1/supermatrix_ge1.ufboot`.
 
 ## Running
 

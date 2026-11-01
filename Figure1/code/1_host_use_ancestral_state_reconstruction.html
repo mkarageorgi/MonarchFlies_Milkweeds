@@ -369,7 +369,7 @@ species tree (tips are the species in the curated HOSTS dataset,
 including the outgroups <em>Mechanitis polymnia</em> and <em>Heliconius
 erato</em>).</li>
 <li><code>../input_data/danaini_host_use_states.csv</code> — one
-host-use state per species, produced by Extended Data Fig. 1
+host-use state per species, produced by Supplementary Fig. 1
 (<code>5_build_host_matrix.Rmd</code>): the native-range
 <em>Asclepias</em> flag, the broader milkweed-clade flag, the host-use
 state coding, and each species’ ATPα genotype.</li>
@@ -385,7 +385,7 @@ carries an inner <strong>ATPα tip strip</strong> (the curated
 per-species ATPα genotype, with unsequenced taxa shown as “Unknown”), so
 host use and the ATPα functional state can be read side by side; the
 ATPα-focused figure, which reuses the node probabilities written here,
-lives in <code>../../Figure2/</code>.</p>
+lives in <code>2_atpalpha_ASR.Rmd</code> (this folder).</p>
 <p>Before reconstructing, internal branches with bootstrap support below
 <code>SUPPORT_CUTOFF</code> (70) are collapsed into polytomies, so the
 reconstruction does not assert ancestral states at splits the phylogeny
@@ -439,7 +439,7 @@ collapse_low_support &lt;- function(phy, cutoff = SUPPORT_CUTOFF) {
 full_palette &lt;- c(&quot;none&quot; = &quot;grey90&quot;, &quot;milkweed&quot; = &quot;#d7c0dd&quot;,
                   &quot;asclepias&quot; = &quot;#65338f&quot;)
 two_palette  &lt;- c(&quot;none&quot; = &quot;grey90&quot;, &quot;asclepias&quot; = &quot;#65338f&quot;)
-# ATPα tip-strip palette and level order (matches Extended Data Fig. 1 / Figure 2,
+# ATPα tip-strip palette and level order (matches Supplementary Fig. 1 / Figure 1,
 # where QAN is the Heliconius genotype). Unsequenced tips are coded &quot;Unknown&quot; and
 # share the grey of the &quot;none&quot; host-use state.
 atpa_palette &lt;- c(&quot;VSH&quot; = &quot;#ed1c2c&quot;, &quot;VSN&quot; = &quot;#f36f21&quot;, &quot;LSN&quot; = &quot;#fec12b&quot;,
@@ -468,7 +468,7 @@ cat(&quot;Collapsed&quot;, n_nodes_before - tree_asr$Nnode,
     tree_asr$Nnode, &quot;of&quot;, n_nodes_before, &quot;internal nodes remain.\n&quot;)</code></pre>
 <pre><code>## Collapsed 17 internal node(s) with support &lt; 70 into polytomies;  38 of 55 internal nodes remain.</code></pre>
 <pre class="r"><code># Orient the tree to the curated reference order used by the earlier reconstruction
-# (and by Extended Data Fig. 1 / Figure 2) rather than ladderizing: rotate internal
+# (and by Supplementary Fig. 1 / Figure 1) rather than ladderizing: rotate internal
 # nodes so the tips read top-to-bottom in that order. Rotation changes only the
 # display, not the topology or branch lengths. Heliconius erato is absent from the
 # reference tree, so it is placed at the base alongside the other outgroups.
