@@ -1,4 +1,4 @@
-# Figure 2 — Na⁺/K⁺-ATPase ouabain resistance (IC₅₀)
+# Supplementary Figure 3 — Na⁺/K⁺-ATPase ouabain resistance (IC₅₀)
 
 Code and data for Figure 2. A single notebook in `code/`, run with the working
 directory at `code/` (all paths are relative to that folder):
