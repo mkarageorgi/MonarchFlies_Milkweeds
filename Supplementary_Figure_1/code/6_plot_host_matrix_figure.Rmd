@@ -1,6 +1,6 @@
 ---
 title: "Supplementary Fig 1 (6/6): Plot the host-use matrix figure"
-author: "Naama Weksler"
+author: "Naama Weksler & Marianna Karageorgi"
 date: "2026-10-22"
 output: html_document
 ---
@@ -261,8 +261,13 @@ p_apoc_tree <- ggtree(plant_tree, branch.length = "none", ladderize = FALSE,
                       size = 0.3) %<+% anno_carden +
   geom_tippoint(aes(color = cardenolide_state), size = 1.5) +
   geom_tiplab(size = 3, angle = 90, hjust = 1, offset = -3, fontface = "italic") +
-  scale_color_manual(name = "Cardenolides",
-                     values = c("Absent" = "grey80", "Present" = "black")) +
+  scale_color_manual(
+  name = "Cardenolides",
+  values = c("Absent" = "grey80",
+             "Present" = "black"),
+  labels = c("Absent" = "Not reported",
+             "Present" = "Reported")
+) +
   xlim_tree(1) +
   coord_flip(clip = "off")
 
