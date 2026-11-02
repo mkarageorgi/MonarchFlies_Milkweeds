@@ -102,7 +102,7 @@ The photometric measurements reported in `NaKATPase_Petschenkaetal.pdf` were fir
 
 ```{r}
 # Read the raw absorbance data
-butterfly.raw = read.csv("./Data/Petschenka2013_NaKATPase_raw_absorbance.csv") %>%
+butterfly.raw = read.csv("../input_data/Petschenka2013_NaKATPase_raw_absorbance.csv") %>%
   rename(Reaction_Conditions = Dose, Technical_Replicate = Replicate) %>%
   filter(
     !(Species_ATPase == "genutia_5" &
@@ -197,7 +197,7 @@ The published source data report Na⁺/K⁺-ATPase activity at each ouabain conc
 
 ```{r}
 Karageorgi.raw = read_excel(
-  "./Data/41586_2019_1610_MOESM5_ESM.xlsx",
+  "../input_data/41586_2019_1610_MOESM5_ESM.xlsx",
   sheet = "Fig3a", range = "A3:H82",
   col_names = FALSE, col_types = "text"
 )
@@ -333,7 +333,7 @@ IC50.replicates
 
 ```{r}
 library(openxlsx)
-openxlsx::write.xlsx(IC50.replicates,"./Supplementary_Table_ATPase_IC50_replicates.xlsx", overwrite = TRUE)
+# openxlsx::write.xlsx(IC50.replicates,"./Supplementary_Table_ATPase_IC50_replicates.xlsx", overwrite = TRUE)
 ```
 
 # 3. IC50s comparison and plotting
@@ -498,7 +498,7 @@ IC50.state.plot = ggplot() +
 
 IC50.state.plot
 
-ggsave("./Plots/IC50_by_ATPase_state_means.png",
+ggsave("../visuals/IC50_by_ATPase_state_means.png",
        IC50.state.plot, width = 8, height = 5, dpi = 300)
 ```
 
