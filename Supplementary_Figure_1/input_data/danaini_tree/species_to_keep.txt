@@ -10,10 +10,13 @@
 #   - Outgroups kept if present in the general HOSTS dataset
 #     (Figure_2/data/resource.csv): Mechanitis polymnia, Heliconius erato.
 #   This list can be edited by hand; Step 3 simply prunes the tree to it.
-# n = 57 species (55 ingroup + 2 outgroup)
+# n = 58 species (56 ingroup + 2 outgroup)
 # Idea_agamarschana added: it is present in both the supermatrix tree and the HOSTS
 # dataset, but a HOSTS misspelling ("agarmarschana") had previously kept it off this
 # list; the name is corrected in Step 5 (5_build_host_matrix.Rmd).
+# Lycorea_halia added: the supermatrix tree carries it as a single taxon, while HOSTS
+# recorded it under the synonyms "ceres" and "cleobaea"; those are merged onto halia
+# in Step 5, so halia is now present in the curated set and kept here.
 
 Amauris_echeria
 Amauris_ellioti
@@ -58,6 +61,7 @@ Ideopsis_gaura
 Ideopsis_juventa
 Ideopsis_similis
 Ideopsis_vulgaris
+Lycorea_halia
 Lycorea_ilione
 Parantica_aglea
 Parantica_agleoides

@@ -131,6 +131,13 @@ hosts <- hosts_schema(hosts_raw) %>%
 #   2. "Idea agarmarschana" is a HOSTS misspelling of Idea agamarschana (the spelling
 #      used in the phylogeny) -> correct the epithet so the record matches the
 #      Idea_agamarschana tree tip and is retained in the figure and ASR.
+#   3. "Lycorea ceres" and "Lycorea cleobaea" are treated as synonyms of Lycorea
+#      halia (ITIS; Petschenka 2013; Brower 2010), the single taxon the phylogeny
+#      carries -> rename both epithets to halia so the records merge onto the
+#      Lycorea_halia tree tip. NOTE: because halia now lumps two HOSTS species, the
+#      ATPalpha genotype measured for cleobaea is NOT carried to the merged taxon
+#      (the ATPalpha join in Section 10 is left to fall through to "unknown"); the
+#      native-range annotation (Section 6) IS carried, as both are Neotropical.
 hosts <- hosts %>%
   mutate(
     butterfly_genus = if_else(
@@ -140,6 +147,10 @@ hosts <- hosts %>%
     butterfly_epithet = if_else(
       butterfly_genus == "Idea" & butterfly_epithet == "agarmarschana",
       "agamarschana", butterfly_epithet
+    ),
+    butterfly_epithet = if_else(
+      butterfly_genus == "Lycorea" & butterfly_epithet %in% c("ceres", "cleobaea"),
+      "halia", butterfly_epithet
     ),
     butterfly_species = str_squish(paste(butterfly_genus, butterfly_epithet))
   )
@@ -345,6 +356,13 @@ overlap_lut <- read.csv(
   stringsAsFactors = FALSE
 ) %>%
   mutate(butterfly_species = clean_name(butterfly_species)) %>%
+  # Mirror the Lycorea halia merge (Section 2) so the native-range annotation keyed
+  # on the old names still applies to the merged taxon; both are Neotropical.
+  mutate(butterfly_species = dplyr::recode(
+    butterfly_species,
+    "Lycorea ceres"    = "Lycorea halia",
+    "Lycorea cleobaea" = "Lycorea halia"
+  )) %>%
   distinct(butterfly_species, native_range_overlap)
 
 associations <- associations %>%
