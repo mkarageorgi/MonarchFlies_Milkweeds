@@ -122,6 +122,28 @@ hosts_raw <- read.csv(
 hosts <- hosts_schema(hosts_raw) %>%
   mutate(record_id = paste0("hosts_", row_number()), .before = 1)
 
+# Taxonomic corrections to the HOSTS butterfly names, applied before anything
+# downstream so that every object (associations, annotations, host-use states) and
+# the tree-restriction in Section 5 use names consistent with the Danaini phylogeny:
+#   1. "Danaus hamata" is a misplaced Tirumala -> reassign the genus to Tirumala;
+#      these records then merge with the existing Tirumala hamata records.
+#      Ref: Robinson, J. & Vane-Wright, R. I. (2018) J. Nat. Hist. 52(11-12):687-712.
+#   2. "Idea agarmarschana" is a HOSTS misspelling of Idea agamarschana (the spelling
+#      used in the phylogeny) -> correct the epithet so the record matches the
+#      Idea_agamarschana tree tip and is retained in the figure and ASR.
+hosts <- hosts %>%
+  mutate(
+    butterfly_genus = if_else(
+      butterfly_genus == "Danaus" & butterfly_epithet == "hamata",
+      "Tirumala", butterfly_genus
+    ),
+    butterfly_epithet = if_else(
+      butterfly_genus == "Idea" & butterfly_epithet == "agarmarschana",
+      "agamarschana", butterfly_epithet
+    ),
+    butterfly_species = str_squish(paste(butterfly_genus, butterfly_epithet))
+  )
+
 hosts_filtered <- quality_filter(hosts)
 
 cat("Raw HOSTS records:        ", nrow(hosts), "\n")
