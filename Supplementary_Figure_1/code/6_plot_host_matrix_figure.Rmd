@@ -13,7 +13,9 @@ from the prepared trees and tables and performs no further data processing.
 
 The figure comprises three aligned panels. On the left, the Danaini phylogeny
 (`Danaini_in_HOSTS.newick`) is drawn with an adjacent strip encoding each
-species' ATPα genotype. Along the top, the genus-level Apocynaceae and Moraceae
+species' ATPα genotype. As in the main Figure 1, internal branches with UFBoot
+support below 70 are collapsed into polytomies so the two figures present the tree
+at the same resolution. Along the top, the genus-level Apocynaceae and Moraceae
 phylogeny built in `4_build_plant_tree.Rmd` is shown with tip points marking
 genera known to contain cardenolides and with bars delimiting plant subfamilies
 and families. At the centre, a presence/absence heatmap records host use for each
@@ -53,6 +55,39 @@ drawn_tip_order <- function(tree) {
   d <- d[d$isTip, ]
   clean_name(d$label[order(d$y)])
 }
+
+# Collapse weakly-supported internal branches into polytomies, exactly as the main
+# Figure 1 does (Figure1/code/1_host_use_ancestral_state_reconstruction.Rmd), so the
+# two figures present the Danaini tree at the same resolution. UFBoot support
+# (0-100) rides on $node.label; we zero the branches subtending below-threshold
+# nodes and let di2multi() merge them. The root is never collapsed, and nodes with
+# no / non-numeric support are left in place. Collapsing removes internal resolution
+# only -- every tip is retained, so the ATPalpha strip and heatmap stay aligned.
+SUPPORT_CUTOFF <- 70
+
+collapse_low_support <- function(phy, cutoff = SUPPORT_CUTOFF) {
+  if (is.null(phy$node.label)) return(phy)
+  supp     <- suppressWarnings(as.numeric(phy$node.label))
+  internal <- (ape::Ntip(phy) + 1):(ape::Ntip(phy) + phy$Nnode)
+  low      <- setdiff(internal[!is.na(supp) & supp < cutoff], ape::Ntip(phy) + 1)
+  if (!length(low)) return(phy)
+  phy$edge.length[phy$edge[, 2] %in% low] <- 0
+  ape::di2multi(phy, tol = 1e-8)
+}
+
+# Tips of the clade sister to `sp` in a fully-resolved tree. Used to place species
+# that are absent from the reference order at their true topological position.
+sister_tips <- function(phy, sp) {
+  i      <- which(phy$tip.label == sp)
+  parent <- phy$edge[phy$edge[, 2] == i, 1]
+  sibs   <- setdiff(phy$edge[phy$edge[, 1] == parent, 2], i)
+  tips   <- character(0)
+  for (s in sibs) {
+    tips <- c(tips, if (s <= ape::Ntip(phy)) phy$tip.label[s]
+                    else ape::extract.clade(phy, s)$tip.label)
+  }
+  clean_name(tips)
+}
 ```
 
 # 2. Read prepared inputs
@@ -74,6 +109,19 @@ atpa <- read.csv(file.path(out_dir, "Ext_fig1_butterfly_atpa.csv"),
 danaini_tree <- read.tree(file.path(in_dir, "Danaini_in_HOSTS.newick"))
 danaini_tree$tip.label <- clean_name(danaini_tree$tip.label)
 
+# Keep the fully-resolved tree so the rotation below can resolve the true positions
+# of species absent from the reference order (their sisters) before any collapsing.
+danaini_tree_full <- danaini_tree
+
+# Collapse UFBoot < SUPPORT_CUTOFF (70) into polytomies before orienting/plotting, so
+# this figure matches the collapsed Figure 1 tree. Done here, before the rotation
+# below, so the reference ordering is applied to the same reduced-resolution tree.
+n_nodes_before <- danaini_tree$Nnode
+danaini_tree <- collapse_low_support(danaini_tree)
+cat("Collapsed", n_nodes_before - danaini_tree$Nnode,
+    "internal node(s) with support <", SUPPORT_CUTOFF, "into polytomies; ",
+    danaini_tree$Nnode, "of", n_nodes_before, "internal nodes remain.\n")
+
 plant_tree_full <- read.tree(
   file.path(in_dir, "Apo_Mora_phylo_tree/apocynaceae_moraceae_genus_tree.newick")
 )
@@ -84,8 +132,11 @@ reconstruction figures (`Figure_2/code/Blanca_HOSTS_milkweed_asclepias_ASR.Rmd`)
 so that Supplementary Fig 1 and Figure 1 present species in the same vertical
 order. The reference order is taken from the species tree used there
 (`danaini_reference_order.newick`); rotation only reorders the display and leaves
-topology and branch lengths unchanged. Species absent from the reference (the
-outgroup *Heliconius erato*) retain their topological placement.
+topology and branch lengths unchanged. Species present in the tree but absent from
+the reference are inserted at their true phylogenetic position, next to their sister
+in the fully-resolved tree (*Lycorea halia* next to *Lycorea ilione*, *Idea
+agamarschana* next to *Idea stolli*), and the outgroup *Heliconius erato* is placed
+at the base alongside the other outgroups.
 
 ```{r rotate-danaini}
 reference_tree <- read.tree(file.path(in_dir, "danaini_reference_order.newick"))
@@ -95,6 +146,28 @@ reference_order <- {
   d <- ggtree(reference_tree, ladderize = FALSE)$data
   d <- d[d$isTip, ]
   clean_name(d$label[order(d$y, decreasing = TRUE)])
+}
+
+# Species present in the tree but missing from the reference (e.g. Lycorea halia and
+# Idea agamarschana, added after the reference was curated) are inserted at their TRUE
+# phylogenetic position: each one's sister tips are looked up in the fully-resolved
+# tree (danaini_tree_full, before collapsing) and it is slotted next to them, so it
+# sits where the resolved topology places it even when the subtending node is later
+# collapsed for display. This extends the reference order rather than breaking it, so
+# the shared species keep their curated order (and Danaus still resolves to the top);
+# if no sister tip is in the reference, fall back to genus adjacency.
+new_species <- setdiff(danaini_tree$tip.label,
+                       c(reference_order, "Heliconius erato"))
+for (sp in new_species) {
+  sis <- sister_tips(danaini_tree_full, sp)
+  pos <- which(reference_order %in% sis)
+  reference_order <- if (length(pos)) {
+    append(reference_order, sp, after = max(pos))
+  } else {
+    same_genus <- which(sub(" .*", "", reference_order) == sub(" .*", "", sp))
+    if (length(same_genus)) append(reference_order, sp, after = max(same_genus))
+    else c(reference_order, sp)
+  }
 }
 
 # Place the outermost outgroup (Heliconius erato, absent from the reference) at
