@@ -26,9 +26,12 @@ procedure comprises the following steps:
    incorporated from `HOSTS_Mechanitis_Heliconius.csv` (which shares the HOSTS
    schema). Neither feeds on Apocynaceae or Moraceae, so both appear as empty
    rows in the figure.
-4. Two curation rules are applied. Under the **native-range rule**, an *Asclepias*
-   association is counted only where the butterfly's native range overlaps that
-   of *Asclepias* (`native_range_overlap == "yes"`). Under the **single-record
+4. Two curation rules are applied. Under the **native-range rule**, each *Asclepias*
+   record is classified as a native-range or an introduced interaction by comparing
+   the plant's, butterfly's, and locality's standardized geographies (Section 6); a
+   butterfly counts as a native *Asclepias* user (`native_range_overlap == "yes"`)
+   only if it has at least one native-range *Asclepias* record, and records whose
+   geography cannot be resolved are sent to manual review. Under the **single-record
    rule**, a single-record association that constitutes a butterfly's only
    evidence for the milkweed clade, or its only evidence for *Asclepias*, is
    retained only if it has been manually validated in
@@ -348,25 +351,297 @@ cat("Tree tips with no associations (empty rows in figure):",
     "\n")
 ```
 
-# 6. Native-range *Asclepias* coding
+# 6. Native vs introduced *Asclepias* coding
 
-```{r biogeography}
-overlap_lut <- read.csv(
-  file.path(in_dir, "butterfly_plant_biogeography.csv"),
-  stringsAsFactors = FALSE
+Each HOSTS *Asclepias* record is classified as a **native-range** interaction or an
+**introduced** one by comparing three geographies on one controlled set of regions:
+the plant's native range (POWO), the butterfly's native range, and the locality where
+the interaction was recorded. The three reference tables are built here and written to
+`../output_data/host_matrix/` (prefixed `ref_`) for inspection. Records whose geography
+cannot be resolved are written to `asclepias_records_to_review.csv` for manual review
+and treated as non-native until resolved. Records with no plant species or an uncertain
+("?") determination are discarded outright; and where the interaction locality is
+unmapped, the butterfly's and plant's native ranges are compared directly, so that
+disjoint ranges resolve to introduced without review. Only *American* *Asclepias* are
+counted: a record whose plant is native outside the Americas -- chiefly the African
+taxa HOSTS files under *Asclepias* but POWO places in *Gomphocarpus* and relatives --
+is excluded. The per-record result is collapsed to the species-level
+flag `native_range_overlap` ("yes" if the butterfly has at least one native *Asclepias*
+record), which Sections 7, 8 and 11 consume unchanged.
+
+## 6.1 Controlled region vocabulary and comparison helper
+
+```{r region-vocab}
+# One controlled set of broad biogeographic regions. Every reference table maps into
+# exactly these tokens; multi-region ranges are stored as "A; B; C" strings.
+REGIONS <- c("North America", "Central America", "Caribbean", "South America",
+             "Africa", "Arabian Peninsula", "Southern Palearctic",
+             "Asia", "Oceania", "Indian Ocean")
+
+# Only *American* Asclepias count as Asclepias use: a record is included only if the
+# plant's native range falls in the Americas. This excludes the African taxa HOSTS
+# files under Asclepias but POWO places in Gomphocarpus / Kanahia / etc.
+AMERICAS <- c("North America", "Central America", "Caribbean", "South America")
+
+# TRUE if two region strings share at least one region; NA if either is missing.
+regions_overlap <- function(x, y) {
+  purrr::map2_lgl(x, y, function(a, b) {
+    if (is.na(a) || is.na(b)) return(NA)
+    length(intersect(str_trim(str_split(a, ";")[[1]]),
+                     str_trim(str_split(b, ";")[[1]]))) > 0
+  })
+}
+
+# Warn if a reference table uses a region outside the controlled vocabulary.
+check_regions <- function(x, name) {
+  toks <- unlist(str_split(na.omit(x), ";")) %>% str_trim()
+  bad  <- setdiff(unique(toks), REGIONS)
+  if (length(bad))
+    warning(name, " uses regions outside REGIONS: ", paste(bad, collapse = ", "))
+}
+```
+
+## 6.2 Reference table 1 -- *Asclepias* accepted taxonomy and native range (POWO)
+
+```{r ref-asclepias}
+# POWO identifiers, for traceable links.
+powo_ids <- c(
+  albicans = "21135-2", amplexicaulis = "60445583-2", asperula = "21143-2",
+  californica = "21153-2", cancellata = "988311-1", coarctata = "94169-1",
+  cordifolia = "21169-2", curassavica = "94213-1", curtissii = "94214-1",
+  eriocarpa = "94258-1", erosa = "94260-1", exaltata = "94266-1",
+  fascicularis = "94272-1", fruticosa = "94302-1", fulva = "94303-1",
+  hirtella = "21200-2", humistrata = "94346-1", incarnata = "94351-1",
+  kaessneri = "20003226-1", lanceolata = "30049929-2", linearis = "94404-1",
+  lineolata = "100241-1", longifolia = "329558-2", nivea = "94486-1",
+  obovata = "329559-2", oenotheroides = "94504-1", physocarpa = "97670-1",
+  phytolaccoides = "94266-1", purpurascens = "94577-1", reflexa = "101880-1",
+  rubra = "94615-1", scabrifolia = "1020446-1", semilunata = "97692-1",
+  speciosa = "94654-1", stenophylla = "94664-1", subulata = "94672-1",
+  subverticillata = "21298-2", sullivantii = "94678-1", swynnertonii = "20003228-1",
+  syriaca = "319076-2", tomentosa = "94697-1", tuberosa = "94704-1",
+  variegata = "94717-1", verticillata = "94722-1", vestita = "94723-1",
+  viridiflora = "1167930-2", viridis = "94737-1"
+)
+
+# Species HOSTS records under Asclepias that POWO now places in another genus.
+asclepias_recode <- c(
+  cancellata = "Gomphocarpus cancellatus", coarctata = "Kanahia laniflora",
+  fruticosa = "Gomphocarpus fruticosus", kaessneri = "Gomphocarpus kaessneri",
+  lineolata = "Pachycarpus lineolatus", physocarpa = "Gomphocarpus physocarpus",
+  phytolaccoides = "Asclepias exaltata", reflexa = "Stathmostelma pauciflorum",
+  scabrifolia = "Asclepias cucullata subsp. scabrifolia",
+  semilunata = "Gomphocarpus semilunatus", swynnertonii = "Gomphocarpus swynnertonii"
+)
+
+# North American Asclepias (native range = North America).
+na_asclepias <- c(
+  "albicans", "amplexicaulis", "asperula", "californica", "cordifolia",
+  "curtissii", "eriocarpa", "erosa", "exaltata", "fascicularis", "hirtella",
+  "humistrata", "incarnata", "lanceolata", "linearis", "longifolia", "obovata",
+  "phytolaccoides", "purpurascens", "rubra", "speciosa", "stenophylla", "subulata",
+  "subverticillata", "sullivantii", "syriaca", "tomentosa", "tuberosa", "variegata",
+  "verticillata", "vestita", "viridiflora", "viridis"
+)
+
+asclepias_taxonomy <- records %>%
+  filter(plant_genus == "Asclepias", !is.na(plant_species), plant_species != "") %>%
+  distinct(hosts_epithet = plant_species) %>%
+  mutate(
+    accepted_name = coalesce(unname(asclepias_recode[hosts_epithet]),
+                             paste("Asclepias", hosts_epithet)),
+    native_regions = case_when(
+      hosts_epithet %in% na_asclepias ~ "North America",
+      hosts_epithet == "curassavica"  ~ "North America; Central America; Caribbean; South America",
+      hosts_epithet == "nivea"        ~ "Caribbean",
+      hosts_epithet == "oenotheroides"~ "North America; Central America",
+      hosts_epithet %in% c("cancellata", "physocarpa", "scabrifolia") ~ "Africa",
+      hosts_epithet %in% c("coarctata", "fruticosa") ~ "Africa; Arabian Peninsula",
+      hosts_epithet %in% c("fulva", "kaessneri", "lineolata",
+                           "reflexa", "semilunata", "swynnertonii") ~ "Africa",
+      TRUE ~ NA_character_
+    ),
+    powo_id   = unname(powo_ids[hosts_epithet]),
+    powo_link = if_else(!is.na(powo_id),
+      paste0("https://powo.science.kew.org/taxon/urn:lsid:ipni.org:names:", powo_id),
+      NA_character_)
+  ) %>%
+  select(hosts_epithet, accepted_name, native_regions, powo_link) %>%
+  arrange(hosts_epithet)
+
+check_regions(asclepias_taxonomy$native_regions, "asclepias_taxonomy")
+write.csv(asclepias_taxonomy, file.path(out_dir, "ref_asclepias_taxonomy.csv"),
+          row.names = FALSE)
+```
+
+## 6.3 Reference table 2 -- butterfly native ranges
+
+```{r ref-butterfly}
+butterfly_native_regions <- read.csv(
+  file.path(in_dir, "butterfly_plant_biogeography.csv"), stringsAsFactors = FALSE
 ) %>%
-  mutate(butterfly_species = clean_name(butterfly_species)) %>%
-  # Mirror the Lycorea halia merge (Section 2) so the native-range annotation keyed
-  # on the old names still applies to the merged taxon; both are Neotropical.
-  mutate(butterfly_species = dplyr::recode(
-    butterfly_species,
-    "Lycorea ceres"    = "Lycorea halia",
-    "Lycorea cleobaea" = "Lycorea halia"
+  mutate(
+    butterfly_species = clean_name(butterfly_species),
+    # Mirror the Lycorea halia merge (Section 2) so the range applies to the merged taxon.
+    butterfly_species = dplyr::recode(butterfly_species,
+      "Lycorea ceres" = "Lycorea halia", "Lycorea cleobaea" = "Lycorea halia"),
+    native_regions = case_when(
+      native_range_description == "New World; secondarily established elsewhere" ~ "North America; Central America; Caribbean; South America",
+      native_range_description == "South America south of the Amazon" ~ "South America",
+      native_range_description == "Eastern Greater Antilles" ~ "Caribbean",
+      native_range_description == "Mexico; Antilles; northern South America" ~ "North America; Central America; Caribbean; South America",
+      native_range_description == "Oriental region" ~ "Asia",
+      native_range_description == "Oriental / Australasian region" ~ "Asia; Oceania",
+      native_range_description == "Central America / South America" ~ "Central America; South America",
+      native_range_description == "Southern USA; Antilles; Central and South America" ~ "North America; Central America; Caribbean; South America",
+      native_range_description == "Old World: Afrotropical; Oriental; southern Palearctic" ~ "Africa; Asia; Southern Palearctic",
+      native_range_description == "Afrotropical region" ~ "Africa",
+      native_range_description == "Australasian region" ~ "Oceania",
+      native_range_description == "Oriental region / Indian Ocean" ~ "Asia; Indian Ocean",
+      native_range_description == "Indian Ocean / Afrotropical islands" ~ "Indian Ocean; Africa",
+      native_range_description == "Neotropical region" ~ "Central America; Caribbean; South America",
+      native_range_description == "Central America and Antilles" ~ "Central America; Caribbean",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  distinct(butterfly_species, native_regions)
+
+check_regions(butterfly_native_regions$native_regions, "butterfly_native_regions")
+write.csv(butterfly_native_regions,
+          file.path(out_dir, "ref_butterfly_native_regions.csv"), row.names = FALSE)
+```
+
+## 6.4 Reference table 3 -- locality (HOSTS country) to region
+
+```{r ref-locality}
+locality_to_region <- records %>%
+  filter(plant_genus == "Asclepias") %>%
+  distinct(country) %>%
+  mutate(region = case_when(
+    country == "Nearctic" | str_detect(country, "^USA") ~ "North America",
+    country %in% c("Cuba", "Puerto Rico", "West Indies") ~ "Caribbean",
+    country == "Brazil"      ~ "South America",
+    country == "Neotropical" ~ "Central America; Caribbean; South America",
+    country == "New World"   ~ "North America; Central America; Caribbean; South America",
+    country %in% c("Afrotropical", "Africa: southern", "East Africa") ~ "Africa",
+    country %in% c("Oriental", "Hong Kong", "India", "India: south",
+                   "Indonesia", "Philippines", "Taiwan", "West Malaysia") ~ "Asia",
+    country %in% c("Australia", "Fiji", "Hawaii") ~ "Oceania",
+    country == "Indo-Australian" ~ "Asia; Oceania",
+    TRUE ~ NA_character_
   )) %>%
-  distinct(butterfly_species, native_range_overlap)
+  arrange(country)
+
+check_regions(locality_to_region$region, "locality_to_region")
+write.csv(locality_to_region, file.path(out_dir, "ref_locality_to_region.csv"),
+          row.names = FALSE)
+```
+
+## 6.5 Coverage check
+
+```{r asclepias-qc}
+asc <- records %>% filter(plant_genus == "Asclepias")
+cat("Asclepias records:", nrow(asc), "\n")
+cat("...with no plant species recorded:",
+    sum(is.na(asc$plant_species) | asc$plant_species == ""), "\n")
+cat("Asclepias epithets with unknown native range:",
+    paste(filter(asclepias_taxonomy, is.na(native_regions))$hosts_epithet,
+          collapse = ", "), "\n")
+cat("Localities with no region mapping:",
+    paste(filter(locality_to_region, is.na(region))$country, collapse = "; "), "\n")
+```
+
+## 6.6 Classify each *Asclepias* record
+
+```{r classify-asclepias}
+# Discard Asclepias records that cannot support a native/introduced call: those with
+# no plant species recorded, and those with an uncertain determination (a "?" in the
+# name, e.g. "nivea?"). These are dropped outright rather than sent to review. (They
+# remain genus-level Asclepias associations in `associations`; only the native-range
+# determination ignores them.)
+asclepias_raw  <- records %>% filter(plant_genus == "Asclepias")
+drop_asclepias <- asclepias_raw %>%
+  filter(is.na(plant_species) | plant_species == "" | str_detect(plant_species, "\\?"))
+cat("Discarded", nrow(drop_asclepias),
+    "Asclepias records with no / uncertain species:",
+    paste(sort(unique(replace_na(drop_asclepias$plant_species, "(no species)"))),
+          collapse = ", "), "\n")
+
+asclepias_records <- asclepias_raw %>%
+  filter(!is.na(plant_species), plant_species != "", !str_detect(plant_species, "\\?")) %>%
+  left_join(asclepias_taxonomy %>%
+              select(plant_species = hosts_epithet, accepted_name,
+                     plant_regions = native_regions),
+            by = "plant_species") %>%
+  left_join(butterfly_native_regions %>%
+              select(butterfly_species, butterfly_regions = native_regions),
+            by = "butterfly_species") %>%
+  left_join(locality_to_region %>% select(country, observed_region = region),
+            by = "country") %>%
+  mutate(
+    plant_native_here     = regions_overlap(plant_regions, observed_region),
+    butterfly_native_here = regions_overlap(butterfly_regions, observed_region),
+    # Do the butterfly's and plant's native ranges overlap at all? Used only when the
+    # interaction locality is unmapped: disjoint ranges mean the interaction cannot be
+    # native anywhere (introduced); overlapping ranges leave it unresolved.
+    ranges_overlap        = regions_overlap(butterfly_regions, plant_regions),
+    # Is this an American Asclepias? Only American Asclepias count as Asclepias use.
+    plant_is_american     = regions_overlap(plant_regions, paste(AMERICAS, collapse = "; ")),
+    status = case_when(
+      is.na(plant_regions)     ~ "review: unknown plant range",
+      is.na(butterfly_regions) ~ "review: unknown butterfly range",
+      !plant_is_american       ~ "excluded: non-American Asclepias",
+      # locality known: judge the interaction at the recorded locality
+      !is.na(observed_region) & plant_native_here & butterfly_native_here ~ "native",
+      !is.na(observed_region) & !plant_native_here     ~ "introduced: plant non-native here",
+      !is.na(observed_region) & !butterfly_native_here ~ "introduced: butterfly non-native here",
+      # locality unmapped: fall back to the butterfly x plant range overlap
+      is.na(observed_region) & !ranges_overlap ~ "introduced: ranges disjoint",
+      is.na(observed_region) &  ranges_overlap ~ "review: locality unmapped",
+      TRUE ~ "review: unclassified"
+    )
+  )
+
+cat("Asclepias records by status:\n")
+print(count(asclepias_records, status, sort = TRUE))
+```
+
+## 6.7 Manual review, native flag, and tree-scoped associations
+
+```{r integrate-asclepias}
+# Unresolved records go to manual review and are treated as non-native until resolved.
+to_review <- asclepias_records %>%
+  filter(str_starts(status, "review")) %>%
+  select(record_id, butterfly_species, plant_species, accepted_name, country,
+         plant_regions, butterfly_regions, observed_region, status)
+write.csv(to_review, file.path(out_dir, "asclepias_records_to_review.csv"),
+          row.names = FALSE)
+cat(nrow(to_review),
+    "Asclepias records need manual review (asclepias_records_to_review.csv);",
+    "treated as non-native until reviewed.\n")
+
+# If a reviewed decisions file exists, its calls override the automatic status.
+# Expected columns: record_id, status (e.g. "native" / "introduced: ...").
+reviewed_file <- file.path(in_dir, "asclepias_records_reviewed.csv")
+if (file.exists(reviewed_file)) {
+  reviewed <- read.csv(reviewed_file, stringsAsFactors = FALSE) %>%
+    transmute(record_id, reviewed_status = str_squish(status))
+  asclepias_records <- asclepias_records %>%
+    left_join(reviewed, by = "record_id") %>%
+    mutate(status = coalesce(reviewed_status, status)) %>%
+    select(-reviewed_status)
+  cat("Applied", nrow(reviewed), "manual review decisions.\n")
+}
+
+# Species-level native flag: "yes" if the butterfly has >= 1 native Asclepias record.
+asclepias_native_species <- asclepias_records %>%
+  filter(status == "native") %>%
+  distinct(butterfly_species) %>%
+  pull(butterfly_species)
 
 associations <- associations %>%
-  left_join(overlap_lut, by = "butterfly_species")
+  mutate(native_range_overlap = if_else(
+    butterfly_species %in% asclepias_native_species, "yes", "no"))
 
 # Tree-scoped copy used for the figure matrix and the single-record validation.
 assoc_tree <- associations %>%
