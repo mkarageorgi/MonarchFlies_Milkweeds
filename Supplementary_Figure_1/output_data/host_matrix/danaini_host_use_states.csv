@@ -16,7 +16,6 @@
 "Danaus erippus",TRUE,TRUE,TRUE,"asclepias","asclepias","VSH"
 "Danaus genutia",TRUE,FALSE,TRUE,"Asclepiadoideae & Secamonoideae","none","VSN"
 "Danaus gilippus",TRUE,TRUE,TRUE,"asclepias","asclepias","VSN"
-"Danaus hamata",FALSE,FALSE,TRUE,"Asclepiadoideae & Secamonoideae","none",NA
 "Danaus melanippus",FALSE,FALSE,TRUE,"Asclepiadoideae & Secamonoideae","none","VSN"
 "Danaus plexaure",TRUE,TRUE,TRUE,"asclepias","asclepias",NA
 "Danaus plexippus",TRUE,TRUE,TRUE,"asclepias","asclepias","VSH"
@@ -46,7 +45,7 @@
 "Euploea tulliolus",FALSE,FALSE,FALSE,"none","none",NA
 "Euploea wallacei",FALSE,FALSE,FALSE,"none","none",NA
 "Heliconius erato",FALSE,FALSE,FALSE,"none","none","QAN"
-"Idea agarmarschana",FALSE,FALSE,FALSE,"none","none",NA
+"Idea agamarschana",FALSE,FALSE,FALSE,"none","none",NA
 "Idea hypermnestra",FALSE,FALSE,FALSE,"none","none",NA
 "Idea leuconoe",FALSE,FALSE,TRUE,"Asclepiadoideae & Secamonoideae","none","LSN"
 "Idea lynceus",FALSE,FALSE,FALSE,"none","none",NA
@@ -56,8 +55,7 @@
 "Ideopsis juventa",FALSE,FALSE,TRUE,"Asclepiadoideae & Secamonoideae","none","LSN"
 "Ideopsis similis",FALSE,FALSE,TRUE,"Asclepiadoideae & Secamonoideae","none",NA
 "Ideopsis vulgaris",FALSE,FALSE,TRUE,"Asclepiadoideae & Secamonoideae","none",NA
-"Lycorea ceres",FALSE,FALSE,FALSE,"none","none",NA
-"Lycorea cleobaea",TRUE,TRUE,TRUE,"asclepias","asclepias","LSN"
+"Lycorea halia",TRUE,TRUE,TRUE,"asclepias","asclepias","LSN"
 "Lycorea ilione",FALSE,FALSE,FALSE,"none","none",NA
 "Mechanitis polymnia",FALSE,FALSE,FALSE,"none","none","LAN"
 "Parantica aglea",FALSE,FALSE,TRUE,"Asclepiadoideae & Secamonoideae","none","LSN"

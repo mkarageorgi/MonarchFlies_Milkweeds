@@ -334,7 +334,7 @@ p <- gheatmap(p, asclepias_strip, offset = tree_xmax * 0.075, width = 0.028,
     name   = "Host use",
     values = full_palette,
     breaks = c("asclepias", "milkweed", "none"),
-    labels = c(expression(paste(italic("Asclepias"), " (native range)")),
+    labels = c(expression(paste("American ", italic("Asclepias"))),
                expression("Asclepiadoideae and Secamonoideae"),
                expression("non-Asclepiadoideae and Secamonoideae")),
     drop   = FALSE

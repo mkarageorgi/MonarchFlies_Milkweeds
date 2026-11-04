@@ -14,7 +14,7 @@ reconstruction (`../../Figure1/code/1_host_use_ancestral_state_reconstruction.Rm
 so the signal test and the reconstruction rest on the same tree and host-use data:
 
 - `../input_data/Danaini_in_HOSTS.newick` — the Danaini species tree.
-- `../input_data/Ext_fig1_host_associations.csv` — the butterfly-species ×
+- `../input_data/danaini_host_plant_associations.csv` — the butterfly-species ×
   plant-genus associations from Supplementary Fig. 1, carrying each association's
   plant subfamily and family. Every row is a documented (present) association.
 
@@ -96,7 +96,7 @@ cat("Tree tips:", length(tree0$tip.label),
 milkweed_subfams <- c("Asclepiadoideae", "Secamonoideae")
 
 assoc <- read.csv(
-  "../input_data/Ext_fig1_host_associations.csv",
+  "../input_data/danaini_host_plant_associations.csv",
   stringsAsFactors = FALSE
 ) %>%
   mutate(butterfly_species = to_tip(butterfly_species))
@@ -450,4 +450,151 @@ knitr::kable(signal_summary, digits = 3,
 write.csv(signal_summary,
           "../output_data/fritz_purvis_D_host_group_summary.csv",
           row.names = FALSE)
+```
+
+# 8. Combined figure: host use on the phylogeny with per-category D statistics
+
+The left panel shows the Danaini tree (UFBoot < 70 collapsed to polytomies, as in
+Figure 1 and Supplementary Fig. 1) with one bar per tip for each tested host
+category. The right panels show the Fritz & Purvis *D* null distributions for the
+same categories: the Brownian (conserved) null is coloured to match the category,
+the random null is grey, and each panel is annotated with the observed *D* (black
+line) and the Benjamini-Hochberg-adjusted P(rand) from Section 7. The *D* results
+reuse the fits computed above (1000 permutations); the tree is collapsed for
+display only, while the *D* tests themselves use the fully resolved tree.
+
+```{r combined-figure, fig.width=12, fig.height=11, warning=FALSE, message=FALSE}
+library(patchwork)
+
+# Collapse UFBoot < SUPPORT_CUTOFF into polytomies (display only), as in Figure 1.
+SUPPORT_CUTOFF <- 70
+collapse_low_support <- function(phy, cutoff = SUPPORT_CUTOFF) {
+  if (is.null(phy$node.label)) return(phy)
+  supp     <- suppressWarnings(as.numeric(phy$node.label))
+  internal <- (ape::Ntip(phy) + 1):(ape::Ntip(phy) + phy$Nnode)
+  low      <- setdiff(internal[!is.na(supp) & supp < cutoff], ape::Ntip(phy) + 1)
+  if (!length(low)) return(phy)
+  phy$edge.length[phy$edge[, 2] %in% low] <- 0
+  ape::di2multi(phy, tol = 1e-8)
+}
+
+# Figure tree: collapse, then orient to the same reference order as tree0 (Section 2).
+tree_fig <- ape::read.tree("../input_data/Danaini_in_HOSTS.newick")
+tree_fig$tip.label <- to_tip(tree_fig$tip.label)
+tree_fig <- collapse_low_support(tree_fig)
+tree_fig <- ape::rotateConstr(tree_fig,
+                              rev(intersect(reference_order, tree_fig$tip.label)))
+
+# Host categories (same predicates as the D tests) and their colours. The milkweed
+# clade keeps the light purple used in the other figures; the remaining categories
+# use the Okabe-Ito colour-blind-safe palette.
+cat_defs <- list(
+  "Asclepiadoideae & Secamonoideae" = function(df) df$plant_subfamily %in% c("Asclepiadoideae", "Secamonoideae"),
+  "Periplocoideae" = function(df) df$plant_subfamily %in% "Periplocoideae",
+  "Apocynoideae"   = function(df) df$plant_subfamily %in% "Apocynoideae",
+  "Rauvolfioideae" = function(df) df$plant_subfamily %in% "Rauvolfioideae",
+  "Moraceae"       = function(df) df$plant_family %in% "Moraceae"
+)
+cat_colors <- c("Asclepiadoideae & Secamonoideae" = "#d7c0dd",
+                "Periplocoideae" = "#E69F00", "Apocynoideae" = "#009E73",
+                "Rauvolfioideae" = "#0072B2", "Moraceae" = "#D55E00",
+                "none" = "grey90")
+
+# Per-tip presence (>= 1 association) for each category, one strip column each.
+pres <- sapply(names(cat_defs), function(nm) {
+  u <- assoc %>% mutate(.u = cat_defs[[nm]](assoc)) %>%
+    group_by(butterfly_species) %>% summarise(u = any(.u), .groups = "drop")
+  v <- setNames(rep(FALSE, length(tree_fig$tip.label)), tree_fig$tip.label)
+  v[intersect(u$butterfly_species[u$u], names(v))] <- TRUE
+  v
+})
+cat_levels <- c("none", names(cat_defs))
+strip_df <- function(nm) {
+  d <- data.frame(v = factor(ifelse(pres[, nm], nm, "none"), levels = cat_levels))
+  rownames(d) <- rownames(pres); colnames(d) <- nm
+  d[tree_fig$tip.label, , drop = FALSE]
+}
+
+# ---- Left: tree + spaced category bars (Figure 1 bar styling) ----
+g_tree <- ggtree(tree_fig, branch.length = "none", ladderize = FALSE,
+                 size = 0.3, color = "grey40")
+xmax <- max(g_tree$data$x, na.rm = TRUE)
+bar_w <- 0.03; bar_gap <- 0.05; bar_off <- 0.02
+for (i in seq_along(cat_defs))
+  g_tree <- gheatmap(g_tree, strip_df(names(cat_defs)[i]),
+                     offset = xmax * (bar_off + (i - 1) * bar_gap),
+                     width = bar_w, colnames = FALSE, color = NA)
+g_tree <- g_tree +
+  scale_fill_manual(name = NULL, values = cat_colors,
+                    breaks = c(names(cat_defs), "none"),
+                    labels = c(names(cat_defs), "No association"),
+                    na.value = "transparent", drop = FALSE) +
+  geom_tiplab(aes(label = abbr_tip(label)),
+              offset = xmax * (bar_off + length(cat_defs) * bar_gap + 0.01),
+              size = 3.0, fontface = "italic", align = TRUE, linetype = 0) +
+  xlim_tree(xmax * 1.62) + coord_cartesian(clip = "off") +
+  theme(legend.position = c(0.01, 1.01), legend.justification = c(0, 1),
+        legend.background = element_blank(), legend.key = element_blank(),
+        legend.margin = margin(0, 0, 0, 0), legend.key.size = unit(0.45, "cm"),
+        legend.text = element_text(size = 11, colour = "black"),
+        text = element_text(colour = "black"), plot.margin = margin(14, 0, 5, 5))
+
+# ---- Right: per-category D null distributions (reuse the Section 3-7 fits) ----
+# BH-adjusted P(rand) across the same six groups as the Section 7 summary table.
+bh_family <- tibble::tibble(
+  key = c("Asclepiadoideae & Secamonoideae", "Non-milkweed", "Periplocoideae",
+          "Apocynoideae", "Rauvolfioideae", "Moraceae"),
+  fit = list(fit_d, fit_nonmilkweed, fit_periplocoideae, fit_apocynoideae,
+             fit_rauvolfioideae, fit_moraceae)
+) %>%
+  mutate(p_rand_bh = p.adjust(vapply(fit, function(f) f$Pval1, numeric(1)),
+                              method = "BH"))
+fit_for_cat <- list(
+  "Asclepiadoideae & Secamonoideae" = fit_d, "Periplocoideae" = fit_periplocoideae,
+  "Apocynoideae" = fit_apocynoideae, "Rauvolfioideae" = fit_rauvolfioideae,
+  "Moraceae" = fit_moraceae
+)
+rescale_D <- function(fit) {
+  mb <- mean(fit$Permutations$brownian); mr <- mean(fit$Permutations$random)
+  function(x) (x - mb) / (mr - mb)
+}
+all_D <- unlist(lapply(names(fit_for_cat), function(nm) {
+  f <- fit_for_cat[[nm]]; td <- rescale_D(f)
+  c(td(f$Permutations$random), td(f$Permutations$brownian), unname(f$DEstimate))
+}))
+x_rng <- range(all_D) + c(-0.03, 0.03) * diff(range(all_D))
+fmt_p <- function(p) ifelse(p == 0, "<0.001", formatC(p, format = "f", digits = 3))
+
+null_panel <- function(nm) {
+  f    <- fit_for_cat[[nm]]; td <- rescale_D(f); Dv <- unname(f$DEstimate)
+  padj <- bh_family$p_rand_bh[bh_family$key == nm]
+  df   <- bind_rows(
+    tibble(D = td(as.numeric(f$Permutations$random)),   model = "Random"),
+    tibble(D = td(as.numeric(f$Permutations$brownian)), model = "Brownian"))
+  ggplot(df, aes(D, fill = model, colour = model)) +
+    geom_density(alpha = 0.55, linewidth = 0.3) +
+    geom_vline(xintercept = Dv, linewidth = 0.7, colour = "black") +
+    annotate("text", x = Dv, y = Inf, vjust = 1.5, hjust = -0.12, size = 3.3,
+             colour = "black", label = sprintf("D = %.2f", Dv)) +
+    annotate("text", x = -Inf, y = Inf, hjust = -0.05, vjust = 1.6, size = 3.3,
+             colour = "black", label = sprintf("adj. P(rand) = %s", fmt_p(padj))) +
+    scale_fill_manual(values = c("Brownian" = cat_colors[[nm]], "Random" = "grey75"),
+                      guide = "none") +
+    scale_colour_manual(values = c("Brownian" = cat_colors[[nm]], "Random" = "grey75"),
+                        guide = "none") +
+    coord_cartesian(xlim = x_rng) +
+    labs(title = nm, x = NULL, y = NULL) +
+    theme_classic(base_size = 11) +
+    theme(plot.title = element_text(size = 12, face = "bold", colour = "black"),
+          text = element_text(colour = "black"),
+          axis.text = element_text(colour = "black", size = 9),
+          axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+          plot.margin = margin(3, 5, 3, 0))
+}
+g_signal <- patchwork::wrap_plots(lapply(names(fit_for_cat), null_panel), ncol = 1)
+
+combined_fig <- g_tree + g_signal + plot_layout(widths = c(1.35, 1))
+combined_fig
+ggsave("../visuals/Supplementary_Fig2_hostuse_phylo_signal.png",
+       combined_fig, width = 12, height = 11, dpi = 300)
 ```
