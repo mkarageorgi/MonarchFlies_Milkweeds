@@ -55,7 +55,7 @@
 "Ideopsis juventa",FALSE,FALSE,TRUE,"Asclepiadoideae & Secamonoideae","none","LSN"
 "Ideopsis similis",FALSE,FALSE,TRUE,"Asclepiadoideae & Secamonoideae","none",NA
 "Ideopsis vulgaris",FALSE,FALSE,TRUE,"Asclepiadoideae & Secamonoideae","none",NA
-"Lycorea halia",TRUE,TRUE,TRUE,"asclepias","asclepias",NA
+"Lycorea halia",TRUE,TRUE,TRUE,"asclepias","asclepias","LSN"
 "Lycorea ilione",FALSE,FALSE,FALSE,"none","none",NA
 "Mechanitis polymnia",FALSE,FALSE,FALSE,"none","none","LAN"
 "Parantica aglea",FALSE,FALSE,TRUE,"Asclepiadoideae & Secamonoideae","none","LSN"

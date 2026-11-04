@@ -707,7 +707,7 @@ write.csv(
     select(butterfly_species, plant_family, plant_subfamily, plant_genus,
            n_records, n_milkweed, n_asclepias, native_range_overlap,
            sole_milkweed, sole_asclepias, must_validate, in_bh),
-  file.path(out_dir, "Ext_fig1_single_record_to_verify.csv"),
+  file.path(out_dir, "single_record_associations_to_verify.csv"),
   row.names = FALSE
 )
 
@@ -760,7 +760,7 @@ cat("...Asclepias cells:", sum(present_associations$plant_genus == "Asclepias"),
 
 write.csv(
   present_associations,
-  file.path(out_dir, "Ext_fig1_host_associations.csv"),
+  file.path(out_dir, "danaini_host_plant_associations.csv"),
   row.names = FALSE
 )
 ```
@@ -796,7 +796,7 @@ cat("...with known cardenolides:",
 
 write.csv(
   plant_genus_attributes,
-  file.path(out_dir, "Ext_fig1_plant_genus_attributes.csv"),
+  file.path(out_dir, "plant_genus_attributes.csv"),
   row.names = FALSE
 )
 ```
@@ -815,6 +815,10 @@ butterfly_atpa <- read.csv(
 ) %>%
   mutate(
     butterfly_species = clean_name(butterfly_species),
+    # Lycorea halia merge (Section 2): the ATPalpha genotype recorded under the
+    # synonyms ceres / cleobaea applies to halia.
+    butterfly_species = dplyr::recode(butterfly_species,
+      "Lycorea ceres" = "Lycorea halia", "Lycorea cleobaea" = "Lycorea halia"),
     atpa_state        = na_if(str_squish(atpa_state), "")
   ) %>%
   filter(!is.na(butterfly_species), butterfly_species != "",
@@ -831,7 +835,7 @@ cat("Butterfly species with a resolved ATPalpha state:", nrow(butterfly_atpa), "
 
 write.csv(
   butterfly_atpa,
-  file.path(out_dir, "Ext_fig1_butterfly_atpa.csv"),
+  file.path(out_dir, "butterfly_atpalpha_states.csv"),
   row.names = FALSE
 )
 ```

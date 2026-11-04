@@ -14,7 +14,7 @@ reconstruction (`../../Figure1/code/1_host_use_ancestral_state_reconstruction.Rm
 so the signal test and the reconstruction rest on the same tree and host-use data:
 
 - `../input_data/Danaini_in_HOSTS.newick` — the Danaini species tree.
-- `../input_data/Ext_fig1_host_associations.csv` — the butterfly-species ×
+- `../input_data/danaini_host_plant_associations.csv` — the butterfly-species ×
   plant-genus associations from Supplementary Fig. 1, carrying each association's
   plant subfamily and family. Every row is a documented (present) association.
 
@@ -96,7 +96,7 @@ cat("Tree tips:", length(tree0$tip.label),
 milkweed_subfams <- c("Asclepiadoideae", "Secamonoideae")
 
 assoc <- read.csv(
-  "../input_data/Ext_fig1_host_associations.csv",
+  "../input_data/danaini_host_plant_associations.csv",
   stringsAsFactors = FALSE
 ) %>%
   mutate(butterfly_species = to_tip(butterfly_species))

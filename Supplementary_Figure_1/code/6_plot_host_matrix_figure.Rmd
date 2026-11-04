@@ -93,16 +93,16 @@ sister_tips <- function(phy, sp) {
 # 2. Read prepared inputs
 
 ```{r read-inputs}
-host_assoc <- read.csv(file.path(out_dir, "Ext_fig1_host_associations.csv"),
+host_assoc <- read.csv(file.path(out_dir, "danaini_host_plant_associations.csv"),
                        stringsAsFactors = FALSE) %>%
   mutate(butterfly_species = clean_name(butterfly_species),
          plant_genus       = str_squish(plant_genus))
 
-plant_attr <- read.csv(file.path(out_dir, "Ext_fig1_plant_genus_attributes.csv"),
+plant_attr <- read.csv(file.path(out_dir, "plant_genus_attributes.csv"),
                        stringsAsFactors = FALSE) %>%
   mutate(plant_genus = str_squish(plant_genus))
 
-atpa <- read.csv(file.path(out_dir, "Ext_fig1_butterfly_atpa.csv"),
+atpa <- read.csv(file.path(out_dir, "butterfly_atpalpha_states.csv"),
                  stringsAsFactors = FALSE) %>%
   mutate(butterfly_species = clean_name(butterfly_species))
 
@@ -238,7 +238,7 @@ p_tile <- ggplot(df_tile,
     name   = "Host use",
     values = c("Absent" = "white", "Present" = "black", "Asclepias" = "#885ca6"),
     breaks = c("Absent", "Present", "Asclepias"),
-    labels = c("Absent", "Present", "Asclepias"),
+    labels = expression("Absent", "Present", "American " * italic("Asclepias")),
     drop   = FALSE
   ) +
   scale_x_discrete(drop = FALSE, limits = col_order, expand = c(0, 0)) +
@@ -375,6 +375,8 @@ fig_final <- plot_spacer() + p_apoc_tree + p_dan_tree + p_tile +
 
 fig_final
 
-ggsave("../visuals/host_matrix/Ext_Fig1_butterfly_x_plant.pdf", fig_final,
+ggsave("../visuals/host_matrix/Supplementary_Fig1_butterfly_x_plant.pdf", fig_final,
        width = 12, height = 10)
+ggsave("../visuals/host_matrix/Supplementary_Fig1_butterfly_x_plant.png", fig_final,
+       width = 12, height = 10, dpi = 300)
 ```
