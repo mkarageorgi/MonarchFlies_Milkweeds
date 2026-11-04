@@ -162,15 +162,41 @@ dropped_tbl <- tibble(
 )
 write_csv(dropped_tbl, file.path(OUT_ROOT, "filtered_out_species.csv"))
 
-p_filt <- ggtree(filtered) + geom_tiplab(size = 2.4) +
-  geom_nodelab(size = 1.8, hjust = -0.2, color = "#2c7fb8") +
-  ggtitle(sprintf("Final filtered tree (%d species)", length(filtered$tip.label))) +
-  theme_tree2() + xlim(0, NA)
-ggsave(file.path(FIG_ROOT, "supermatrix_ge1_filtered_tree.pdf"), p_filt,
-       width = 8, height = 10, limitsize = FALSE)
+# Figure: the filtered tree with UFBoot branch support, oriented to the shared
+# reference order (danaini_reference_order.newick, as used by the host-matrix and
+# ASR figures). Support >= 70 is grey, < 70 red. Rotation changes display only.
+ref_tree  <- ape::read.tree("../input_data/host_matrix/danaini_reference_order.newick")
+ref_order <- {
+  rd <- ggtree(ref_tree, ladderize = FALSE)$data
+  rd <- rd[rd$isTip, ]
+  rd$label[order(rd$y, decreasing = TRUE)]
+}
+ref_order    <- c(ref_order, "Heliconius_erato")
+filtered_fig <- ape::rotateConstr(filtered,
+                                  rev(intersect(ref_order, filtered$tip.label)))
+
+p_filt <- ggtree(filtered_fig, branch.length = "none", size = 0.5, ladderize = FALSE)
+p_filt <- p_filt +
+  geom_tiplab(aes(label = gsub("_", " ", label)), fontface = "italic",
+              size = 3.6, offset = max(p_filt$data$x) * 0.012) +
+  geom_nodelab(aes(label = label,
+                   colour = suppressWarnings(as.numeric(label)) < 70),
+               size = 3.4, hjust = 1.25, vjust = -0.35, show.legend = FALSE) +
+  scale_colour_manual(values = c(`TRUE` = "#d1495b", `FALSE` = "grey30"),
+                      na.translate = FALSE, guide = "none") +
+  labs(title = sprintf("Danaini filtered supermatrix tree (%d species)",
+                       length(filtered_fig$tip.label)),
+       subtitle = "Node values = UFBoot branch support (red < 70, grey ≥ 70)") +
+  coord_cartesian(clip = "off") + theme_tree() +
+  theme(plot.title = element_text(size = 15), plot.subtitle = element_text(size = 12),
+        plot.margin = margin(5, 75, 5, 5))
+p_filt <- p_filt + xlim(0, max(p_filt$data$x, na.rm = TRUE) * 1.32)
+ggsave(file.path(FIG_ROOT, "filtered_tree_branch_support.png"), p_filt,
+       width = 10, height = 17, dpi = 300, limitsize = FALSE)
 
 cat("Wrote:", figure_tree,
-    "| branch_support_filtered.csv | filtered_out_species.csv | filtered-tree PDF\n")
+    "| branch_support_filtered.csv | filtered_out_species.csv",
+    "| filtered-tree PNG (filtered_tree_branch_support.png)\n")
 ```
 
 # Notes
